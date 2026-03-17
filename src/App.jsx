@@ -22,9 +22,6 @@ function App() {
     const abortRef = useRef(null);
     const startingRef = useRef(false);
 
-    const [currentEnv, setCurrentEnv] = useState('stage');
-    const [envSwitching, setEnvSwitching] = useState(false);
-
     const [companies, setCompanies] = useState([]);
     const [selectedOrg, setSelectedOrg] = useState(null);
     const [selectedCompany, setSelectedCompany] = useState(null);
@@ -104,7 +101,6 @@ function App() {
             const user = { name: d?.name || 'Unknown', email: d?.email || null };
             setCurrentUser(user);
         }).catch(() => {});
-        apiFetch('/api/current-env').then(r => r.json()).then(d => { if (d.env) setCurrentEnv(d.env); }).catch(() => {});
         fetchHistory();
     }, [fetchHistory]);
 
@@ -112,29 +108,6 @@ function App() {
     useEffect(() => {
         if (!isRunning) fetchHistory();
     }, [isRunning, fetchHistory]);
-
-    const handleSwitchEnv = useCallback(async (targetEnv) => {
-        if (isRunning || envSwitching) return;
-        setEnvSwitching(true);
-        setDbStatus('checking');
-        try {
-            const res = await apiFetch('/api/switch-env', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ env: targetEnv }),
-            });
-            const data = await res.json();
-            if (!data.ok) throw new Error(data.error || 'Switch failed');
-
-            await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-            setCurrentEnv(targetEnv);
-            navigate('/login', { replace: true });
-        } catch (err) {
-            setToastMessage(`Environment switch failed: ${err.message}`);
-        } finally {
-            setEnvSwitching(false);
-        }
-    }, [isRunning, envSwitching, navigate]);
 
     const handleLogout = useCallback(async () => {
         await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
@@ -480,7 +453,16 @@ function App() {
                 if (field.required === false) return !!value;
                 return true;
             });
-        if (config.dualScopeSelector) {
+        if (navItem.scriptKey === 'copySelectiveCustomizations') {
+            const selectedSections = Array.isArray(scriptValues._customizationTypes)
+                ? scriptValues._customizationTypes
+                : ['global', 'custom_texts', 'json_navigation_menu'];
+            const sectionsCsv = selectedSections.join(',');
+            const sourceId = args[0];
+            const targetId = args[1];
+            args.length = 0;
+            args.push(currentScope, sourceId, targetId, sectionsCsv);
+        } else if (config.dualScopeSelector) {
             args.push(sourceScope, targetScope);
         } else if (config.scopeSelector) {
             args.push(currentScope);
@@ -607,11 +589,19 @@ function App() {
                     : cfg.fields;
                 const hasUploadedSheet = nav.scriptKey === 'importCustomSearchMenusFromSheet'
                     && !!scriptValues?.xlsxFileUpload?.contentBase64;
-                return fields.every((f) => {
+                const requiredFieldsFilled = fields.every((f) => {
                     if (f.required === false) return true;
                     if (nav.scriptKey === 'importCustomSearchMenusFromSheet' && f.key === 'xlsxPath' && hasUploadedSheet) return true;
                     return (scriptValues[f.key] || '').trim();
                 });
+                if (!requiredFieldsFilled) return false;
+                if (nav.scriptKey === 'copySelectiveCustomizations') {
+                    const selectedSections = Array.isArray(scriptValues._customizationTypes)
+                        ? scriptValues._customizationTypes
+                        : ['global', 'custom_texts', 'json_navigation_menu'];
+                    return selectedSections.length > 0;
+                }
+                return true;
             }
         }
     })();
@@ -671,9 +661,6 @@ function App() {
                     onRetry={allowStepControls ? handleRetry : undefined}
                     onSkip={allowStepControls ? handleSkip : undefined}
                     onOpenSidebar={() => setSidebarOpen(true)}
-                    currentEnv={currentEnv}
-                    onSwitchEnv={handleSwitchEnv}
-                    envSwitching={envSwitching}
                     currentUserEmail={currentUser?.email}
                     onLogout={handleLogout}
                 />

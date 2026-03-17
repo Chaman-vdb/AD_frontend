@@ -202,11 +202,11 @@ export function InventoryPermissionForm({
 
 export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
     const sheetFileInputRef = useRef(null);
+    const sampleSheetUrl = 'https://docs.google.com/spreadsheets/d/1cFRVoDdhwU9zlCH_q3e-TR5KkRvHuxiy9KmTU4SsaKo/edit?usp=sharing';
     const nav_id = mode;
     const scriptKey = nav_id.replace('script-copy-search-menus', 'copyCustomSearchMenus')
         .replace('script-copy-white-label', 'copyOrgWhiteLabel')
-        .replace('script-copy-customizations', 'copyOrgCustomizations')
-        .replace('script-copy-company-customizations', 'copyCompanyCustomizations')
+        .replace('script-copy-customizations', 'copySelectiveCustomizations')
         .replace('script-test-features', 'testFeatureActivation')
         .replace('script-test-customizations', 'testCustomizations')
         .replace('script-import-search-menus-sheet', 'importCustomSearchMenusFromSheet');
@@ -233,6 +233,28 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
         : cfg.scopeSelector
         ? (cfg.fieldsByScope?.[currentScope] || cfg.fields)
         : cfg.fields;
+    const customizationTypeOptions = [
+        { value: 'global', label: 'Global' },
+        { value: 'custom_texts', label: 'Custom Texts' },
+        { value: 'json_navigation_menu', label: 'JsonNavigationMenu' },
+    ];
+    const selectedCustomizationTypes = Array.isArray(scriptValues._customizationTypes)
+        ? scriptValues._customizationTypes
+        : customizationTypeOptions.map((opt) => opt.value);
+    const toggleCustomizationType = (typeValue) => {
+        setScriptValues((prev) => {
+            const current = Array.isArray(prev._customizationTypes)
+                ? prev._customizationTypes
+                : customizationTypeOptions.map((opt) => opt.value);
+            const exists = current.includes(typeValue);
+            return {
+                ...prev,
+                _customizationTypes: exists
+                    ? current.filter((item) => item !== typeValue)
+                    : [...current, typeValue],
+            };
+        });
+    };
 
     const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -245,6 +267,19 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
         <>
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
                 <p className="text-[11px] text-amber-700 leading-relaxed">{cfg.description}</p>
+                {scriptKey === 'importCustomSearchMenusFromSheet' && (
+                    <p className="mt-1 text-[11px] text-amber-800">
+                        Sample sheet:{' '}
+                        <a
+                            href={sampleSheetUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-semibold underline underline-offset-2 hover:text-amber-900"
+                        >
+                            Open Google Sheet
+                        </a>
+                    </p>
+                )}
             </div>
             {cfg.dualScopeSelector && (
                 <>
@@ -339,6 +374,26 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                     </div>
                 </div>
             )}
+            {scriptKey === 'copySelectiveCustomizations' && (
+                <div>
+                    <label className={sideLabel}>Customization Sections</label>
+                    <div className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-white p-2">
+                        {customizationTypeOptions.map((option) => (
+                            <label key={option.value} className="flex items-center gap-2 text-[12px] text-slate-700">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedCustomizationTypes.includes(option.value)}
+                                    onChange={() => toggleCustomizationType(option.value)}
+                                    disabled={disabled}
+                                    className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                                />
+                                {option.label}
+                            </label>
+                        ))}
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-400">Select at least one section to copy.</p>
+                </div>
+            )}
             <div className={activeFields.length === 2 ? 'flex flex-col gap-2' : 'space-y-2'}>
                 {activeFields.map(f => (
                     <div key={f.key} className={activeFields.length === 2 ? 'flex-1 min-w-0' : ''}>
@@ -349,8 +404,30 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                                     <input
                                         className={sideInput}
                                         value={scriptValues[f.key] || ''}
-                                        onChange={e => setScriptValues((p) => ({ ...p, [f.key]: e.target.value, xlsxFileUpload: null }))}
-                                        onBlur={e => setScriptValues((p) => ({ ...p, [f.key]: e.target.value.trim(), xlsxFileUpload: null }))}
+                                        onChange={(e) => {
+                                            const nextValue = e.target.value;
+                                            setScriptValues((p) => {
+                                                const uploadedName = p.xlsxFileUpload?.filename || '';
+                                                const keepUpload = !!uploadedName && nextValue.trim() === uploadedName;
+                                                return {
+                                                    ...p,
+                                                    [f.key]: nextValue,
+                                                    xlsxFileUpload: keepUpload ? p.xlsxFileUpload : null,
+                                                };
+                                            });
+                                        }}
+                                        onBlur={(e) => {
+                                            const trimmed = e.target.value.trim();
+                                            setScriptValues((p) => {
+                                                const uploadedName = p.xlsxFileUpload?.filename || '';
+                                                const keepUpload = !!uploadedName && trimmed === uploadedName;
+                                                return {
+                                                    ...p,
+                                                    [f.key]: trimmed,
+                                                    xlsxFileUpload: keepUpload ? p.xlsxFileUpload : null,
+                                                };
+                                            });
+                                        }}
                                         placeholder={f.placeholder}
                                         disabled={disabled}
                                     />

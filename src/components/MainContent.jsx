@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Activity, Database, Loader2, LogOut } from 'lucide-react';
+import { Activity, Database, LogOut } from 'lucide-react';
 import { SidebarTrigger } from './Sidebar.jsx';
 import StepPipeline from './StepPipeline.jsx';
 import StatusLog from './StatusLog.jsx';
@@ -8,43 +8,14 @@ import { Card } from './ui/Card.jsx';
 import { Badge } from './ui/Badge.jsx';
 import { fadeIn } from '../constants.js';
 
-function EnvToggle({ currentEnv, onSwitch, disabled }) {
-    const isProd = currentEnv === 'production';
-    return (
-        <button
-            onClick={() => onSwitch(isProd ? 'stage' : 'production')}
-            disabled={disabled}
-            className="relative flex items-center h-7 w-[106px] rounded-full border border-slate-200 bg-slate-100 p-0.5 text-[10px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={`Switch to ${isProd ? 'Stage' : 'Production'}`}
-        >
-            <span className={`z-10 flex-1 text-center transition-colors ${!isProd ? 'text-white' : 'text-slate-500'}`}>Stage</span>
-            <span className={`z-10 flex-1 text-center transition-colors ${isProd ? 'text-white' : 'text-slate-500'}`}>Prod</span>
-            <span
-                className={`absolute top-0.5 h-6 w-[50px] rounded-full transition-all duration-200 ${
-                    isProd ? 'left-[54px] bg-orange-500' : 'left-0.5 bg-blue-600'
-                }`}
-            />
-        </button>
-    );
-}
-
 function MainContent({
     activeNavItem, ActiveIcon, isRunning, dbStatus,
     steps, logs, overallStatus, runStartTime, selectedOrg,
     onResume, onRetry, onSkip, onOpenSidebar,
-    currentEnv, onSwitchEnv, envSwitching,
     currentUserEmail, onLogout,
 }) {
     return (
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-            {envSwitching && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-                    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-6 py-4 shadow-lg">
-                        <Loader2 className="size-5 text-blue-600 animate-spin" />
-                        <span className="text-sm font-medium text-slate-700">Switching environment... Server restarting</span>
-                    </div>
-                </div>
-            )}
             <header className="h-[62px] border-b border-slate-200 bg-white flex items-center justify-between px-5 shrink-0">
                 <div className="flex items-center gap-3">
                     <SidebarTrigger onClick={onOpenSidebar} className="lg:hidden" />
@@ -56,7 +27,9 @@ function MainContent({
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <EnvToggle currentEnv={currentEnv} onSwitch={onSwitchEnv} disabled={isRunning || envSwitching} />
+                    <Badge variant="warning" className="px-2 py-0.5 text-[10px]">
+                        PROD
+                    </Badge>
                     <Badge variant={dbStatus === 'connected' ? 'success' : dbStatus === 'error' ? 'destructive' : 'warning'} className="px-2 py-0.5 text-[10px] hidden sm:inline-flex">
                         <Database className="size-3 mr-1" />
                         {dbStatus === 'connected' ? 'Online' : dbStatus === 'error' ? 'Offline' : 'Checking'}

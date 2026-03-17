@@ -22,12 +22,23 @@ const SCRIPT_FIELDS = {
             { key: 'targetOrgId', label: 'Target Org ID', placeholder: 'e.g. 945' },
         ],
     },
-    copyOrgCustomizations: {
-        title: 'Copy Org Customizations',
-        description: 'Copies all customizations (Global, Custom Texts, JsonNavMenu) between orgs.',
+    copySelectiveCustomizations: {
+        title: 'Copy Customizations (Org/Company)',
+        description: 'Copies selected customizations (Global, Custom Texts, JsonNavMenu) using one unified script.',
+        scopeSelector: true,
+        fieldsByScope: {
+            org: [
+                { key: 'sourceId', label: 'Source Org ID', placeholder: 'e.g. 832' },
+                { key: 'targetId', label: 'Target Org ID', placeholder: 'e.g. 945' },
+            ],
+            company: [
+                { key: 'sourceId', label: 'Source Company ID', placeholder: 'e.g. 39416' },
+                { key: 'targetId', label: 'Target Company ID', placeholder: 'e.g. 91268' },
+            ],
+        },
         fields: [
-            { key: 'sourceOrgId', label: 'Source Org ID', placeholder: 'e.g. 832' },
-            { key: 'targetOrgId', label: 'Target Org ID', placeholder: 'e.g. 945' },
+            { key: 'sourceId', label: 'Source ID', placeholder: 'e.g. 832' },
+            { key: 'targetId', label: 'Target ID', placeholder: 'e.g. 945' },
         ],
     },
     testFeatureActivation: {
@@ -44,14 +55,6 @@ const SCRIPT_FIELDS = {
         fields: [
             { key: 'sourceOrgId', label: 'Source Org ID', placeholder: 'e.g. 577' },
             { key: 'targetOrgId', label: 'Target Org ID', placeholder: 'e.g. 1008' },
-        ],
-    },
-    copyCompanyCustomizations: {
-        title: 'Copy Company Customizations',
-        description: 'Copies all customizations (Global, Custom Texts, JsonNavMenu) between companies.',
-        fields: [
-            { key: 'sourceCompanyId', label: 'Source Company ID', placeholder: 'e.g. 39416' },
-            { key: 'targetCompanyId', label: 'Target Company ID', placeholder: 'e.g. 91268' },
         ],
     },
     importCustomSearchMenusFromSheet: {

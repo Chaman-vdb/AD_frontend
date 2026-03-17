@@ -1,15 +1,14 @@
 import {
-    Building, Building2, UserPlus, FileCode, Copy, Palette, Zap, FlaskConical, KeyRound,
+    Building, Building2, FileCode, Copy, Palette, Zap, FlaskConical, KeyRound,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
     { id: 'org', label: 'Copy Organization', icon: Building2, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
     { id: 'company', label: 'Copy Company', icon: Building, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { id: 'user', label: 'Create Users', icon: UserPlus, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+    // { id: 'user', label: 'Create Users', icon: UserPlus, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
     { id: 'script-copy-search-menus', label: 'Script: Copy Custom Search Menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
     { id: 'script-copy-white-label', label: 'Script: Copy White Label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
-    { id: 'script-copy-customizations', label: 'Script: Copy Org Customizations(Global, Custom Texts, JsonNavMenu)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgCustomizations' },
-    { id: 'script-copy-company-customizations', label: 'Script: Copy Company Customizations(Global, Custom Texts, JsonNavMenu)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCompanyCustomizations' },
+    { id: 'script-copy-customizations', label: 'Script: Selective Customizations Copy', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copySelectiveCustomizations' },
     { id: 'script-test-features', label: 'Script: Feature Switches Copy(Company)', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
     { id: 'script-test-customizations', label: 'Script: Customizations Spec(PDP, SearchResult, SearchForm)', icon: FlaskConical, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testCustomizations' },
     { id: 'script-import-search-menus-sheet', label: 'Script: Import Custom Search Menus (Sheet)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'importCustomSearchMenusFromSheet' },
@@ -35,11 +34,6 @@ export const STEP_DEFS = {
         { id: 'run-spec', label: 'Run Company Replication (Playwright)' },
         { id: 'lookup-id', label: 'Lookup New Company ID' },
     ],
-    user: [
-        { id: 'validate-fields', label: 'Validate Input Fields' },
-        { id: 'write-data', label: 'Prepare Data File' },
-        { id: 'run-spec', label: 'Create Users (Playwright)' },
-    ],
     inventoryPermissions: [
         { id: 'validate-fields', label: 'Validate Input Fields' },
         { id: 'run-spec', label: 'Create API Client / Inventory Permissions' },
@@ -52,13 +46,9 @@ export const STEP_DEFS = {
         { id: 'init', label: 'Initialize' },
         { id: 'run', label: 'Copy White Label Configs' },
     ],
-    copyOrgCustomizations: [
+    copySelectiveCustomizations: [
         { id: 'init', label: 'Initialize' },
-        { id: 'run', label: 'Copy Customizations, Texts & Nav' },
-    ],
-    copyCompanyCustomizations: [
-        { id: 'init', label: 'Initialize' },
-        { id: 'run', label: 'Copy Company Customizations' },
+        { id: 'run', label: 'Copy Selected Customizations' },
     ],
     testFeatureActivation: [
         { id: 'init', label: 'Initialize' },
