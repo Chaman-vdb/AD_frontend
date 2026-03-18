@@ -41,6 +41,14 @@ const SCRIPT_FIELDS = {
             { key: 'targetId', label: 'Target ID', placeholder: 'e.g. 945' },
         ],
     },
+    copyCustomDataAndValues: {
+        title: 'Copy Custom Data Headers & Values',
+        description: 'Copies custom_data_headers and custom_data_values from one company to another.',
+        fields: [
+            { key: 'sourceCompanyId', label: 'Source Company ID', placeholder: 'e.g. 218571' },
+            { key: 'targetCompanyId', label: 'Target Company ID', placeholder: 'e.g. 218572' },
+        ],
+    },
     testFeatureActivation: {
         title: 'Test Feature Activation',
         description: 'Tests the API-based feature activation by copying active features between companies.',

@@ -9,6 +9,7 @@ export const NAV_ITEMS = [
     { id: 'script-copy-search-menus', label: 'Script: Copy Custom Search Menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
     { id: 'script-copy-white-label', label: 'Script: Copy White Label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
     { id: 'script-copy-customizations', label: 'Script: Selective Customizations Copy', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copySelectiveCustomizations' },
+    { id: 'script-copy-custom-data', label: 'Script: Copy Custom Data Headers & Values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues' },
     { id: 'script-test-features', label: 'Script: Feature Switches Copy(Company)', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
     { id: 'script-test-customizations', label: 'Script: Customizations Spec(PDP, SearchResult, SearchForm)', icon: FlaskConical, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testCustomizations' },
     { id: 'script-import-search-menus-sheet', label: 'Script: Import Custom Search Menus (Sheet)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'importCustomSearchMenusFromSheet' },
@@ -49,6 +50,10 @@ export const STEP_DEFS = {
     copySelectiveCustomizations: [
         { id: 'init', label: 'Initialize' },
         { id: 'run', label: 'Copy Selected Customizations' },
+    ],
+    copyCustomDataAndValues: [
+        { id: 'init', label: 'Initialize' },
+        { id: 'run', label: 'Copy Custom Data Headers & Values' },
     ],
     testFeatureActivation: [
         { id: 'init', label: 'Initialize' },

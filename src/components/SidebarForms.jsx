@@ -207,6 +207,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
     const scriptKey = nav_id.replace('script-copy-search-menus', 'copyCustomSearchMenus')
         .replace('script-copy-white-label', 'copyOrgWhiteLabel')
         .replace('script-copy-customizations', 'copySelectiveCustomizations')
+        .replace('script-copy-custom-data', 'copyCustomDataAndValues')
         .replace('script-test-features', 'testFeatureActivation')
         .replace('script-test-customizations', 'testCustomizations')
         .replace('script-import-search-menus-sheet', 'importCustomSearchMenusFromSheet');
@@ -252,6 +253,27 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                 _customizationTypes: exists
                     ? current.filter((item) => item !== typeValue)
                     : [...current, typeValue],
+            };
+        });
+    };
+    const customDataSectionOptions = [
+        { value: 'headers', label: 'Custom Data Headers' },
+        { value: 'values', label: 'Custom Data Values' },
+    ];
+    const selectedCustomDataSections = Array.isArray(scriptValues._customDataSections)
+        ? scriptValues._customDataSections
+        : customDataSectionOptions.map((opt) => opt.value);
+    const toggleCustomDataSection = (sectionValue) => {
+        setScriptValues((prev) => {
+            const current = Array.isArray(prev._customDataSections)
+                ? prev._customDataSections
+                : customDataSectionOptions.map((opt) => opt.value);
+            const exists = current.includes(sectionValue);
+            return {
+                ...prev,
+                _customDataSections: exists
+                    ? current.filter((item) => item !== sectionValue)
+                    : [...current, sectionValue],
             };
         });
     };
@@ -384,6 +406,26 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                                     type="checkbox"
                                     checked={selectedCustomizationTypes.includes(option.value)}
                                     onChange={() => toggleCustomizationType(option.value)}
+                                    disabled={disabled}
+                                    className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                                />
+                                {option.label}
+                            </label>
+                        ))}
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-400">Select at least one section to copy.</p>
+                </div>
+            )}
+            {scriptKey === 'copyCustomDataAndValues' && (
+                <div>
+                    <label className={sideLabel}>Copy Sections</label>
+                    <div className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-white p-2">
+                        {customDataSectionOptions.map((option) => (
+                            <label key={option.value} className="flex items-center gap-2 text-[12px] text-slate-700">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedCustomDataSections.includes(option.value)}
+                                    onChange={() => toggleCustomDataSection(option.value)}
                                     disabled={disabled}
                                     className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                                 />

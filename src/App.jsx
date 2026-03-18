@@ -462,6 +462,15 @@ function App() {
             const targetId = args[1];
             args.length = 0;
             args.push(currentScope, sourceId, targetId, sectionsCsv);
+        } else if (navItem.scriptKey === 'copyCustomDataAndValues') {
+            const selectedSections = Array.isArray(scriptValues._customDataSections)
+                ? scriptValues._customDataSections
+                : ['headers', 'values'];
+            const sourceCompanyId = args[0];
+            const targetCompanyId = args[1];
+            const sectionsCsv = selectedSections.join(',');
+            args.length = 0;
+            args.push(sourceCompanyId, targetCompanyId, sectionsCsv);
         } else if (config.dualScopeSelector) {
             args.push(sourceScope, targetScope);
         } else if (config.scopeSelector) {
@@ -599,6 +608,12 @@ function App() {
                     const selectedSections = Array.isArray(scriptValues._customizationTypes)
                         ? scriptValues._customizationTypes
                         : ['global', 'custom_texts', 'json_navigation_menu'];
+                    return selectedSections.length > 0;
+                }
+                if (nav.scriptKey === 'copyCustomDataAndValues') {
+                    const selectedSections = Array.isArray(scriptValues._customDataSections)
+                        ? scriptValues._customDataSections
+                        : ['headers', 'values'];
                     return selectedSections.length > 0;
                 }
                 return true;
