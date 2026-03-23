@@ -71,7 +71,7 @@ function LeftPanel({
                     )
                 ) : (
                     <Button className="w-full bg-blue-600 hover:bg-blue-700 border-blue-700" disabled={!canStart} onClick={onStart}>
-                        <Play className="size-3.5" /> Start {mode === 'org' ? 'Replication' : mode === 'company' ? 'Copy' : mode === 'user' ? 'Creating' : 'Script'}
+                        <Play className="size-3.5" /> Start {activeNavItem?.category === 'replication' ? 'Replication' : activeNavItem?.category === 'create' ? 'Create' : 'Copy'}
                     </Button>
                 )}
             </div>

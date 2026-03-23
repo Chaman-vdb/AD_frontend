@@ -1046,7 +1046,7 @@ function App() {
                     />
                 );
             default:
-                return <ScriptForm mode={mode} scriptValues={scriptValues} setScriptValues={setScriptValues} disabled={disabled} />;
+                return <ScriptForm mode={mode} scriptValues={scriptValues} setScriptValues={setScriptValues} disabled={disabled} orgs={orgs} />;
         }
     };
 

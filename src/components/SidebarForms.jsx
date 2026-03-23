@@ -1,8 +1,9 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { SCRIPT_FIELDS } from "./ScriptRunnerForm.jsx";
 import { Select } from "./ui/Select.jsx";
 import { sideInput, sideLabel, fadeIn } from "../constants.js";
+import { apiFetch } from "../lib/api.js";
 
 export function OrgForm({
   orgs,
@@ -569,7 +570,66 @@ export function InventoryPermissionForm({
   );
 }
 
-export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
+function useCompanies(orgId) {
+  const [companies, setCompanies] = useState([]);
+  useEffect(() => {
+    if (!orgId) { setCompanies([]); return; }
+    let cancelled = false;
+    apiFetch(`/api/data/companies?org_id=${orgId}`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled && Array.isArray(d)) setCompanies(d); })
+      .catch(() => { if (!cancelled) setCompanies([]); });
+    return () => { cancelled = true; };
+  }, [orgId]);
+  return companies;
+}
+
+function OrgOrCompanyPicker({ label, scope, orgId, companyId, orgs, companies, onOrgChange, onCompanyChange, disabled }) {
+  return (
+    <div className="space-y-2">
+      <div>
+        <label className={sideLabel}>{scope === "company" ? `${label} Org` : label}</label>
+        <Select
+          value={orgId || ""}
+          onChange={(e) => onOrgChange(e.target.value || "")}
+          className="w-full"
+          searchable
+          searchPlaceholder="Search orgs..."
+          disabled={disabled}
+        >
+          <option value="">Select org...</option>
+          {orgs.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name} (#{o.id})
+            </option>
+          ))}
+        </Select>
+      </div>
+      {scope === "company" && orgId && (
+        <div>
+          <label className={sideLabel}>{label} Company</label>
+          <Select
+            value={companyId || ""}
+            onChange={(e) => onCompanyChange(e.target.value || "")}
+            className="w-full"
+            searchable
+            searchPlaceholder="Search companies..."
+            disabled={disabled}
+          >
+            <option value="">Select company...</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} #{c.id}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ScriptForm({ mode, scriptValues, setScriptValues, disabled, orgs = [] }) {
   const sheetFileInputRef = useRef(null);
   const sampleSheetUrl =
     "https://docs.google.com/spreadsheets/d/1cFRVoDdhwU9zlCH_q3e-TR5KkRvHuxiy9KmTU4SsaKo/edit?usp=sharing";
@@ -587,52 +647,81 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
     );
 
   const cfg = SCRIPT_FIELDS[scriptKey];
+
+  const sourceOrgId = scriptValues._sourceOrgId || "";
+  const targetOrgId = scriptValues._targetOrgId || "";
+
+  const hasExplicitCompanySourceField = cfg?.fields?.some((f) => f.key === "sourceCompanyId");
+  const hasExplicitCompanyTargetField = cfg?.fields?.some((f) => f.key === "targetCompanyId");
+  const sourceNeedsCompanies = hasExplicitCompanySourceField
+    || (cfg?.dualScopeSelector ? scriptValues._sourceScope === "company" : false)
+    || (!cfg?.dualScopeSelector && cfg?.scopeSelector && scriptValues._scope === "company");
+  const targetNeedsCompanies = hasExplicitCompanyTargetField
+    || (cfg?.dualScopeSelector ? scriptValues._targetScope === "company" : false)
+    || (!cfg?.dualScopeSelector && cfg?.scopeSelector && scriptValues._scope === "company");
+
+  const sourceCompanies = useCompanies(sourceNeedsCompanies ? sourceOrgId : null);
+  const targetCompanies = useCompanies(targetNeedsCompanies ? targetOrgId : null);
+
+  const setField = useCallback((key, value) => {
+    setScriptValues((p) => ({ ...p, [key]: value }));
+  }, [setScriptValues]);
+
   if (!cfg) return null;
 
   const currentScope = scriptValues._scope || "org";
   const sourceScope = scriptValues._sourceScope || "org";
   const targetScope = scriptValues._targetScope || "org";
+
+  const isOrgField = (fieldKey) => {
+    const orgKeys = ["sourceOrgId", "targetOrgId"];
+    if (orgKeys.includes(fieldKey)) return true;
+    if (fieldKey === "sourceId" && (cfg.dualScopeSelector ? sourceScope === "org" : currentScope === "org")) return true;
+    if (fieldKey === "targetId" && (cfg.dualScopeSelector ? targetScope === "org" : currentScope === "org")) return true;
+    return false;
+  };
+
+  const isCompanyField = (fieldKey) => {
+    const companyKeys = ["sourceCompanyId", "targetCompanyId"];
+    if (companyKeys.includes(fieldKey)) return true;
+    if (fieldKey === "sourceId" && (cfg.dualScopeSelector ? sourceScope === "company" : currentScope === "company")) return true;
+    if (fieldKey === "targetId" && (cfg.dualScopeSelector ? targetScope === "company" : currentScope === "company")) return true;
+    return false;
+  };
+
+  const isSourceField = (fieldKey) => ["sourceId", "sourceOrgId", "sourceCompanyId"].includes(fieldKey);
+  const isTargetField = (fieldKey) => ["targetId", "targetOrgId", "targetCompanyId"].includes(fieldKey);
+
   const activeFields = cfg.dualScopeSelector
     ? [
         {
           key: "sourceId",
-          label:
-            sourceScope === "company" ? "Source Company ID" : "Source Org ID",
+          label: sourceScope === "company" ? "Source Company" : "Source Org",
           placeholder: sourceScope === "company" ? "e.g. 39416" : "e.g. 500",
         },
         {
           key: "targetId",
-          label:
-            targetScope === "company" ? "Target Company ID" : "Target Org ID",
+          label: targetScope === "company" ? "Target Company" : "Target Org",
           placeholder: targetScope === "company" ? "e.g. 91549" : "e.g. 945",
         },
       ]
     : cfg.scopeSelector
       ? cfg.fieldsByScope?.[currentScope] || cfg.fields
       : cfg.fields;
+
   const customizationTypeOptions = [
     { value: "global", label: "Global", defaultSelected: true },
     { value: "custom_texts", label: "Custom Texts", defaultSelected: true },
-    {
-      value: "json_navigation_menu",
-      label: "JsonNavigationMenu",
-      defaultSelected: true,
-    },
+    { value: "json_navigation_menu", label: "JsonNavigationMenu", defaultSelected: true },
     { value: "pdp", label: "PDP", defaultSelected: false },
     { value: "search_form", label: "Search form", defaultSelected: false },
     { value: "search_result", label: "Search result", defaultSelected: false },
-    {
-      value: "product_unified_page",
-      label: "Product unified page",
-      defaultSelected: false,
-    },
+    { value: "product_unified_page", label: "Product unified page", defaultSelected: false },
   ];
   const defaultCustomizationTypeValues = customizationTypeOptions
     .filter((opt) => opt.defaultSelected)
     .map((opt) => opt.value);
-  const selectedCustomizationTypes = Array.isArray(
-    scriptValues._customizationTypes,
-  )
+  const selectedCustomizationTypes = Array.isArray(scriptValues._customizationTypes)
     ? scriptValues._customizationTypes
     : defaultCustomizationTypeValues;
   const toggleCustomizationType = (typeValue) => {
@@ -653,9 +742,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
     { value: "headers", label: "Custom Data Headers" },
     { value: "values", label: "Custom Data Values" },
   ];
-  const selectedCustomDataSections = Array.isArray(
-    scriptValues._customDataSections,
-  )
+  const selectedCustomDataSections = Array.isArray(scriptValues._customDataSections)
     ? scriptValues._customDataSections
     : customDataSectionOptions.map((opt) => opt.value);
   const toggleCustomDataSection = (sectionValue) => {
@@ -681,6 +768,148 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
         reject(reader.error || new Error("Failed to read file"));
       reader.readAsDataURL(file);
     });
+
+  const handleSourceOrgChange = (orgId) => {
+    setScriptValues((p) => ({ ...p, _sourceOrgId: orgId, sourceId: orgId, sourceOrgId: orgId, sourceCompanyId: "" }));
+  };
+  const handleSourceCompanyChange = (companyId) => {
+    setScriptValues((p) => ({ ...p, sourceId: companyId, sourceCompanyId: companyId }));
+  };
+  const handleTargetOrgChange = (orgId) => {
+    setScriptValues((p) => ({ ...p, _targetOrgId: orgId, targetId: orgId, targetOrgId: orgId, targetCompanyId: "" }));
+  };
+  const handleTargetCompanyChange = (companyId) => {
+    setScriptValues((p) => ({ ...p, targetId: companyId, targetCompanyId: companyId }));
+  };
+
+  const renderField = (f) => {
+    if (isOrgField(f.key) || isCompanyField(f.key)) {
+      const isSrc = isSourceField(f.key);
+      const explicitCompany = ["sourceCompanyId", "targetCompanyId"].includes(f.key);
+      const scope = explicitCompany
+        ? "company"
+        : cfg.dualScopeSelector
+          ? (isSrc ? sourceScope : targetScope)
+          : currentScope;
+      return (
+        <OrgOrCompanyPicker
+          key={f.key}
+          label={isSrc ? "Source" : "Target"}
+          scope={scope}
+          orgId={isSrc ? sourceOrgId : targetOrgId}
+          companyId={scriptValues[f.key] || ""}
+          orgs={orgs}
+          companies={isSrc ? sourceCompanies : targetCompanies}
+          onOrgChange={isSrc ? handleSourceOrgChange : handleTargetOrgChange}
+          onCompanyChange={isSrc ? handleSourceCompanyChange : handleTargetCompanyChange}
+          disabled={disabled}
+        />
+      );
+    }
+
+    if (scriptKey === "importCustomSearchMenusFromSheet" && f.key === "xlsxPath") {
+      return (
+        <div key={f.key}>
+          <label className={sideLabel}>{f.label}</label>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <input
+                className={sideInput}
+                value={scriptValues[f.key] || ""}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setScriptValues((p) => {
+                    const uploadedName = p.xlsxFileUpload?.filename || "";
+                    const keepUpload = !!uploadedName && nextValue.trim() === uploadedName;
+                    return { ...p, [f.key]: nextValue, xlsxFileUpload: keepUpload ? p.xlsxFileUpload : null };
+                  });
+                }}
+                onBlur={(e) => {
+                  const trimmed = e.target.value.trim();
+                  setScriptValues((p) => {
+                    const uploadedName = p.xlsxFileUpload?.filename || "";
+                    const keepUpload = !!uploadedName && trimmed === uploadedName;
+                    return { ...p, [f.key]: trimmed, xlsxFileUpload: keepUpload ? p.xlsxFileUpload : null };
+                  });
+                }}
+                placeholder={f.placeholder}
+                disabled={disabled}
+              />
+              <input
+                ref={sheetFileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const dataUrl = await readFileAsBase64(file);
+                    const base64 = dataUrl.split(",")[1] || "";
+                    setScriptValues((p) => ({
+                      ...p,
+                      xlsxPath: file.name,
+                      xlsxFileUpload: { filename: file.name, contentBase64: base64 },
+                    }));
+                  } catch (error) {
+                    console.error(error);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="h-8 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                disabled={disabled}
+                onClick={() => sheetFileInputRef.current?.click()}
+              >
+                Browse
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-400">
+              Tip: You can paste a path or pick the file directly.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (scriptKey === "importCustomSearchMenusFromSheet" && f.key === "targetOrgId") {
+      return (
+        <div key={f.key}>
+          <label className={sideLabel}>{f.label}</label>
+          <Select
+            value={scriptValues[f.key] || ""}
+            onChange={(e) => setField(f.key, e.target.value)}
+            className="w-full"
+            searchable
+            searchPlaceholder="Search orgs..."
+            disabled={disabled}
+          >
+            <option value="">Select org...</option>
+            {orgs.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name} (#{o.id})
+              </option>
+            ))}
+          </Select>
+        </div>
+      );
+    }
+
+    return (
+      <div key={f.key}>
+        <label className={sideLabel}>{f.label}</label>
+        <input
+          className={sideInput}
+          value={scriptValues[f.key] || ""}
+          onChange={(e) => setField(f.key, e.target.value)}
+          onBlur={(e) => setField(f.key, e.target.value.trim())}
+          placeholder={f.placeholder}
+          disabled={disabled}
+        />
+      </div>
+    );
+  };
 
   return (
     <>
@@ -717,7 +946,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                 type="button"
                 onClick={() =>
                   !disabled &&
-                  setScriptValues((p) => ({ ...p, _sourceScope: "org" }))
+                  setScriptValues((p) => ({ ...p, _sourceScope: "org", sourceId: p._sourceOrgId || "", sourceCompanyId: "" }))
                 }
                 disabled={disabled}
                 className={`flex-1 px-3 py-1.5 text-[11px] font-semibold transition-colors ${
@@ -732,7 +961,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                 type="button"
                 onClick={() =>
                   !disabled &&
-                  setScriptValues((p) => ({ ...p, _sourceScope: "company" }))
+                  setScriptValues((p) => ({ ...p, _sourceScope: "company", sourceId: "" }))
                 }
                 disabled={disabled}
                 className={`flex-1 px-3 py-1.5 text-[11px] font-semibold transition-colors ${
@@ -752,7 +981,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                 type="button"
                 onClick={() =>
                   !disabled &&
-                  setScriptValues((p) => ({ ...p, _targetScope: "org" }))
+                  setScriptValues((p) => ({ ...p, _targetScope: "org", targetId: p._targetOrgId || "", targetCompanyId: "" }))
                 }
                 disabled={disabled}
                 className={`flex-1 px-3 py-1.5 text-[11px] font-semibold transition-colors ${
@@ -767,7 +996,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                 type="button"
                 onClick={() =>
                   !disabled &&
-                  setScriptValues((p) => ({ ...p, _targetScope: "company" }))
+                  setScriptValues((p) => ({ ...p, _targetScope: "company", targetId: "" }))
                 }
                 disabled={disabled}
                 className={`flex-1 px-3 py-1.5 text-[11px] font-semibold transition-colors ${
@@ -789,7 +1018,8 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
             <button
               type="button"
               onClick={() =>
-                !disabled && setScriptValues((p) => ({ ...p, _scope: "org" }))
+                !disabled &&
+                setScriptValues((p) => ({ ...p, _scope: "org", sourceId: p._sourceOrgId || "", targetId: p._targetOrgId || "", sourceCompanyId: "", targetCompanyId: "" }))
               }
               disabled={disabled}
               className={`flex-1 px-3 py-1.5 text-[11px] font-semibold transition-colors ${
@@ -804,7 +1034,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
               type="button"
               onClick={() =>
                 !disabled &&
-                setScriptValues((p) => ({ ...p, _scope: "company" }))
+                setScriptValues((p) => ({ ...p, _scope: "company", sourceId: "", targetId: "" }))
               }
               disabled={disabled}
               className={`flex-1 px-3 py-1.5 text-[11px] font-semibold transition-colors ${
@@ -874,109 +1104,8 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
           </p>
         </div>
       )}
-      <div
-        className={
-          activeFields.length === 2 ? "flex flex-col gap-2" : "space-y-2"
-        }
-      >
-        {activeFields.map((f) => (
-          <div
-            key={f.key}
-            className={activeFields.length === 2 ? "flex-1 min-w-0" : ""}
-          >
-            <label className={sideLabel}>{f.label}</label>
-            {scriptKey === "importCustomSearchMenusFromSheet" &&
-            f.key === "xlsxPath" ? (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <input
-                    className={sideInput}
-                    value={scriptValues[f.key] || ""}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      setScriptValues((p) => {
-                        const uploadedName = p.xlsxFileUpload?.filename || "";
-                        const keepUpload =
-                          !!uploadedName && nextValue.trim() === uploadedName;
-                        return {
-                          ...p,
-                          [f.key]: nextValue,
-                          xlsxFileUpload: keepUpload ? p.xlsxFileUpload : null,
-                        };
-                      });
-                    }}
-                    onBlur={(e) => {
-                      const trimmed = e.target.value.trim();
-                      setScriptValues((p) => {
-                        const uploadedName = p.xlsxFileUpload?.filename || "";
-                        const keepUpload =
-                          !!uploadedName && trimmed === uploadedName;
-                        return {
-                          ...p,
-                          [f.key]: trimmed,
-                          xlsxFileUpload: keepUpload ? p.xlsxFileUpload : null,
-                        };
-                      });
-                    }}
-                    placeholder={f.placeholder}
-                    disabled={disabled}
-                  />
-                  <input
-                    ref={sheetFileInputRef}
-                    type="file"
-                    accept=".xlsx,.xls"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const dataUrl = await readFileAsBase64(file);
-                        const base64 = dataUrl.split(",")[1] || "";
-                        setScriptValues((p) => ({
-                          ...p,
-                          xlsxPath: file.name,
-                          xlsxFileUpload: {
-                            filename: file.name,
-                            contentBase64: base64,
-                          },
-                        }));
-                      } catch (error) {
-                        console.error(error);
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="h-8 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                    disabled={disabled}
-                    onClick={() => sheetFileInputRef.current?.click()}
-                  >
-                    Browse
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-400">
-                  Tip: You can paste a path or pick the file directly.
-                </p>
-              </div>
-            ) : (
-              <input
-                className={sideInput}
-                value={scriptValues[f.key] || ""}
-                onChange={(e) =>
-                  setScriptValues((p) => ({ ...p, [f.key]: e.target.value }))
-                }
-                onBlur={(e) =>
-                  setScriptValues((p) => ({
-                    ...p,
-                    [f.key]: e.target.value.trim(),
-                  }))
-                }
-                placeholder={f.placeholder}
-                disabled={disabled}
-              />
-            )}
-          </div>
-        ))}
+      <div className="space-y-2">
+        {activeFields.map((f) => renderField(f))}
       </div>
     </>
   );

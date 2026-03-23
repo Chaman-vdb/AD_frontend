@@ -1,19 +1,24 @@
 import {
-    Building, Building2, FileCode, Copy, Palette, Zap, FlaskConical, KeyRound, FileSpreadsheet,
+    Building, Building2, FileCode, Copy, Palette, Zap, FlaskConical, KeyRound, FileSpreadsheet, Upload,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
-    { id: 'org', label: 'Copy Organization', icon: Building2, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-    { id: 'company', label: 'Copy Company', icon: Building, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { id: 'bulk-users-sheet', label: 'Bulk users (Excel/CSV)', icon: FileSpreadsheet, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700' },
-    { id: 'script-copy-search-menus', label: 'Copy custom search menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
-    { id: 'script-copy-white-label', label: 'Copy white label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
-    { id: 'script-copy-customizations', label: 'Copy customizations (org/company)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations' },
-    { id: 'script-copy-custom-data', label: 'Copy custom data & values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues' },
-    { id: 'script-test-features', label: 'Copy company feature switches', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
-    { id: 'script-test-customizations', label: 'Test PDP / search customizations', icon: FlaskConical, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testCustomizations' },
-    { id: 'script-import-search-menus-sheet', label: 'Import search menus from sheet', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'importCustomSearchMenusFromSheet' },
-    { id: 'inventory-permissions', label: 'Inventory API Permissions', icon: KeyRound, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700' },
+    // ── Replication (full entity cloning) ──
+    { id: 'org', label: 'Copy Organization', icon: Building2, iconBg: 'bg-violet-100', iconColor: 'text-violet-600', category: 'replication' },
+    { id: 'company', label: 'Copy Company', icon: Building, iconBg: 'bg-blue-100', iconColor: 'text-blue-600', category: 'replication' },
+
+    // ── Copy (replicate configs between existing entities) ──
+    { id: 'script-copy-search-menus', label: 'Copy Search Menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus', category: 'copy' },
+    { id: 'script-copy-white-label', label: 'Copy White Label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel', category: 'copy' },
+    { id: 'script-copy-customizations', label: 'Copy Customizations', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations', category: 'copy' },
+    { id: 'script-copy-custom-data', label: 'Copy Custom Data & Values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues', category: 'copy' },
+    { id: 'script-test-features', label: 'Copy Feature Switches', icon: Zap, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'testFeatureActivation', category: 'copy' },
+    { id: 'script-test-customizations', label: 'Test PDP / Search Customizations', icon: FlaskConical, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testCustomizations', category: 'copy' },
+
+    // ── Create (provision new things) ──
+    { id: 'bulk-users-sheet', label: 'Bulk Users (Excel/CSV)', icon: FileSpreadsheet, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700', category: 'create' },
+    { id: 'inventory-permissions', label: 'Inventory API Permissions', icon: KeyRound, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700', category: 'create' },
+    { id: 'script-import-search-menus-sheet', label: 'Import Search Menus from Sheet', icon: Upload, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700', scriptKey: 'importCustomSearchMenusFromSheet', category: 'create' },
 ];
 
 export const STEP_DEFS = {
