@@ -9,7 +9,7 @@ import RunHistory from './RunHistory.jsx';
 import { fadeIn } from '../constants.js';
 
 function LeftPanel({
-    activeNavItem, ActiveIcon, mode, isRunning, canStart,
+    activeNavItem, ActiveIcon, mode, isRunning, navigationLocked = false, canStart,
     canStopExecution = true,
     dbStatus, historyOpen, setHistoryOpen,
     onOpenSidebar, onStart, onStop,
@@ -71,7 +71,18 @@ function LeftPanel({
                     )
                 ) : (
                     <Button className="w-full bg-blue-600 hover:bg-blue-700 border-blue-700" disabled={!canStart} onClick={onStart}>
-                        <Play className="size-3.5" /> Start {mode === 'org' ? 'Replication' : mode === 'company' ? 'Copy' : mode === 'user' ? 'Creating' : 'Script'}
+                        <Play className="size-3.5" /> Start{' '}
+                        {mode === 'org'
+                            ? 'replication'
+                            : mode === 'company'
+                              ? 'copy'
+                              : mode === 'bulk-users-sheet'
+                                ? 'bulk create'
+                                : mode === 'inventory-permissions'
+                                  ? 'permissions'
+                                  : mode === 'user'
+                                    ? 'creating users'
+                                    : 'workflow'}
                     </Button>
                 )}
             </div>
@@ -89,13 +100,22 @@ function LeftPanel({
                     >
                         <History className="size-4" />
                     </button>
-                    <Link
-                        to="/history"
-                        className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors text-[9px] font-bold uppercase tracking-wide"
-                        title="Full history page"
-                    >
-                        All
-                    </Link>
+                    {navigationLocked ? (
+                        <span
+                            className="p-1.5 rounded-lg text-slate-300 cursor-not-allowed text-[9px] font-bold uppercase tracking-wide"
+                            title="Finish or stop the current task before opening history"
+                        >
+                            All
+                        </span>
+                    ) : (
+                        <Link
+                            to="/history"
+                            className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors text-[9px] font-bold uppercase tracking-wide"
+                            title="Full history page"
+                        >
+                            All
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -114,7 +134,13 @@ function LeftPanel({
                             </button>
                         </div>
                         <div className="overflow-y-auto max-h-52 px-3 pb-3">
-                            <RunHistory runs={runHistory.slice(0, 10)} activeRunId={activeHistoryId} onSelectRun={onSelectRun} onDeleteRun={onDeleteRun} />
+                            <RunHistory
+                                runs={runHistory.slice(0, 10)}
+                                activeRunId={activeHistoryId}
+                                onSelectRun={onSelectRun}
+                                onDeleteRun={onDeleteRun}
+                                navigationLocked={navigationLocked}
+                            />
                         </div>
                     </motion.div>
                 )}

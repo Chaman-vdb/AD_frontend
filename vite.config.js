@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
                 '/api': {
                     target: proxyTarget,
                     changeOrigin: true,
+                    // Long-running SSE (replication) — avoid dev proxy closing the stream early
+                    timeout: 3_600_000,
+                    proxyTimeout: 3_600_000,
                 },
             },
         },

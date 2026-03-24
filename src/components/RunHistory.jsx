@@ -11,7 +11,7 @@ const MODE_META = {
     script: { icon: FileCode, color: 'text-amber-500', bg: 'bg-amber-50', tag: 'Script' },
 };
 
-function RunHistory({ runs, activeRunId, onSelectRun, onDeleteRun }) {
+function RunHistory({ runs, activeRunId, onSelectRun, onDeleteRun, navigationLocked = false }) {
     const navigate = useNavigate();
     if (!runs || runs.length === 0) {
         return (
@@ -59,11 +59,13 @@ function RunHistory({ runs, activeRunId, onSelectRun, onDeleteRun }) {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -8 }}
                             onClick={() => {
+                                if (navigationLocked) return;
                                 onSelectRun?.(run.id);
                                 navigate(`/history/${run.id}`);
                             }}
                             className={cn(
                                 'w-full text-left px-3 py-2.5 rounded-lg transition-all group relative',
+                                navigationLocked && 'opacity-60 cursor-not-allowed',
                                 isActive
                                     ? 'bg-blue-50 border border-blue-200'
                                     : 'hover:bg-slate-50 border border-transparent'

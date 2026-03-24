@@ -2,6 +2,30 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Menu, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils.js';
+import { NAV_SECTIONS } from '../constants.js';
+
+const SECTION_ORDER = ['replication', 'create', 'sync'];
+
+const sectionAccent = {
+    replication: {
+        activeBg: 'bg-blue-50',
+        activeBorder: 'border-blue-600',
+        activeText: 'text-blue-700',
+        chevron: 'text-blue-500',
+    },
+    create: {
+        activeBg: 'bg-emerald-50',
+        activeBorder: 'border-emerald-600',
+        activeText: 'text-emerald-800',
+        chevron: 'text-emerald-600',
+    },
+    sync: {
+        activeBg: 'bg-amber-50',
+        activeBorder: 'border-amber-500',
+        activeText: 'text-amber-800',
+        chevron: 'text-amber-500',
+    },
+};
 
 const overlay = {
     initial: { opacity: 0 },
@@ -16,10 +40,10 @@ const drawer = {
 };
 
 function Sidebar({ isOpen, onClose, items, activeId, onSelect, disabled }) {
-    const grouped = {
-        main: items.filter(i => !i.scriptKey),
-        scripts: items.filter(i => !!i.scriptKey),
-    };
+    const groupedSections = SECTION_ORDER.map((sid) => ({
+        ...NAV_SECTIONS[sid],
+        items: items.filter((i) => (i.section || 'sync') === sid),
+    })).filter((g) => g.items.length > 0);
 
     const handleSelect = (id) => {
         if (disabled) return;
@@ -54,75 +78,48 @@ function Sidebar({ isOpen, onClose, items, activeId, onSelect, disabled }) {
                         </div>
 
                         <nav className="flex-1 overflow-y-auto py-3">
-                            <div className="px-4 mb-2">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                                    Replication
-                                </p>
-                            </div>
-                            {grouped.main.map((item) => {
-                                const Icon = item.icon;
-                                const isActive = item.id === activeId;
-                                return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => handleSelect(item.id)}
-                                        disabled={disabled}
-                                        className={cn(
-                                            'w-full flex items-center gap-3 px-5 py-3 text-left transition-all',
-                                            isActive
-                                                ? 'bg-blue-50 border-r-3 border-blue-600'
-                                                : 'hover:bg-slate-50 border-r-3 border-transparent',
-                                            disabled && 'opacity-50 cursor-not-allowed'
-                                        )}
-                                    >
-                                        <div className={cn('p-1.5 rounded-lg', item.iconBg || 'bg-slate-100')}>
-                                            <Icon className={cn('size-4', item.iconColor || 'text-slate-600')} strokeWidth={2} />
-                                        </div>
-                                        <span className={cn(
-                                            'text-sm font-medium flex-1',
-                                            isActive ? 'text-blue-700' : 'text-slate-700'
-                                        )}>
-                                            {item.label}
-                                        </span>
-                                        {isActive && <ChevronRight className="size-4 text-blue-500" />}
-                                    </button>
-                                );
-                            })}
-
-                            <div className="px-4 mt-5 mb-2">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                                    Scripts
-                                </p>
-                            </div>
-                            {grouped.scripts.map((item) => {
-                                const Icon = item.icon;
-                                const isActive = item.id === activeId;
-                                return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => handleSelect(item.id)}
-                                        disabled={disabled}
-                                        className={cn(
-                                            'w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all',
-                                            isActive
-                                                ? 'bg-amber-50 border-r-3 border-amber-500'
-                                                : 'hover:bg-slate-50 border-r-3 border-transparent',
-                                            disabled && 'opacity-50 cursor-not-allowed'
-                                        )}
-                                    >
-                                        <div className={cn('p-1.5 rounded-lg', item.iconBg || 'bg-slate-100')}>
-                                            <Icon className={cn('size-3.5', item.iconColor || 'text-slate-600')} strokeWidth={2} />
-                                        </div>
-                                        <span className={cn(
-                                            'text-xs font-medium flex-1 leading-tight',
-                                            isActive ? 'text-amber-700' : 'text-slate-600'
-                                        )}>
-                                            {item.label.replace('Script: ', '')}
-                                        </span>
-                                        {isActive && <ChevronRight className="size-3.5 text-amber-500" />}
-                                    </button>
-                                );
-                            })}
+                            {groupedSections.map((section, sIdx) => (
+                                <div key={section.id} className={sIdx > 0 ? 'mt-5' : ''}>
+                                    <div className="px-4 mb-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                                            {section.title}
+                                        </p>
+                                    </div>
+                                    {section.items.map((item) => {
+                                        const Icon = item.icon;
+                                        const isActive = item.id === activeId;
+                                        const accent = sectionAccent[item.section] || sectionAccent.sync;
+                                        const isCompact = item.section === 'sync';
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => handleSelect(item.id)}
+                                                disabled={disabled}
+                                                className={cn(
+                                                    'w-full flex items-center gap-3 px-5 text-left transition-all',
+                                                    isCompact ? 'py-2.5' : 'py-3',
+                                                    isActive
+                                                        ? cn(accent.activeBg, 'border-r-3', accent.activeBorder)
+                                                        : 'hover:bg-slate-50 border-r-3 border-transparent',
+                                                    disabled && 'opacity-50 cursor-not-allowed'
+                                                )}
+                                            >
+                                                <div className={cn('p-1.5 rounded-lg', item.iconBg || 'bg-slate-100')}>
+                                                    <Icon className={cn(isCompact ? 'size-3.5' : 'size-4', item.iconColor || 'text-slate-600')} strokeWidth={2} />
+                                                </div>
+                                                <span className={cn(
+                                                    isCompact ? 'text-xs leading-tight' : 'text-sm',
+                                                    'font-medium flex-1',
+                                                    isActive ? accent.activeText : 'text-slate-700'
+                                                )}>
+                                                    {item.label}
+                                                </span>
+                                                {isActive && <ChevronRight className={cn(isCompact ? 'size-3.5' : 'size-4', accent.chevron)} />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ))}
                         </nav>
 
                         <div className="px-5 py-3 border-t border-slate-200 bg-slate-50">

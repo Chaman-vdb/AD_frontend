@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Building2 } from 'lucide-react';
+import { AlertTriangle, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { SCRIPT_FIELDS } from './components/ScriptRunnerForm.jsx';
@@ -8,7 +8,9 @@ import LeftPanel from './components/LeftPanel.jsx';
 import MainContent from './components/MainContent.jsx';
 import { OrgForm, CompanyForm, UserForm, InventoryPermissionForm, ScriptForm, BulkUsersSheetForm } from './components/SidebarForms.jsx';
 import { NAV_ITEMS, STEP_DEFS } from './constants.js';
-import { apiFetch } from './lib/api.js';
+import { getWorkflowNote } from './workflowNotes.jsx';
+import { apiFetch, readNdjsonBulkRunResponse } from './lib/api.js';
+import { useProcessLock } from './context/ProcessLockContext.jsx';
 
 const BULK_CREATED_CSV_HEADER = 'username,userId,email';
 
@@ -116,6 +118,16 @@ function App() {
     const [runHistory, setRunHistory] = useState([]);
     const [activeHistoryId, setActiveHistoryId] = useState(null);
     const [toastMessage, setToastMessage] = useState('');
+    /** null | 'run' | 'bulk-validate' — production confirmation before side effects */
+    const [pendingAction, setPendingAction] = useState(null);
+
+    const { setLocked } = useProcessLock();
+    const navigationLocked = isRunning || bulkUsersValidating;
+
+    useEffect(() => {
+        setLocked(navigationLocked);
+        return () => setLocked(false);
+    }, [navigationLocked, setLocked]);
 
     const addToHistory = useCallback((run) => {
         setRunHistory(prev => {
@@ -705,7 +717,7 @@ function App() {
                 });
             }
 
-            const data = await res.json().catch(() => ({ ok: false, message: 'Invalid JSON response' }));
+            const data = await readNdjsonBulkRunResponse(res);
 
             if (res.status === 409 && data.code === 'USERNAME_CONFLICT') {
                 setBulkPreparedPayload((prev) => ({
@@ -899,11 +911,108 @@ function App() {
         }
     };
 
+    const buildConfirmationLines = () => {
+        const lines = [];
+        const nav = NAV_ITEMS.find((n) => n.id === mode);
+        switch (mode) {
+            case 'org':
+                lines.push(`Source org: ${orgDetails?.name || '—'} (#${selectedOrg || '—'})`);
+                if (selectedCompany && companyDetails) {
+                    lines.push(`Optional company: ${companyDetails.name} (#${selectedCompany})`);
+                }
+                lines.push(`New org name: ${newOrgName || '—'}`);
+                lines.push(`Domain URL: ${newDomainUrl || '—'}`);
+                break;
+            case 'company': {
+                const src = ccCompanies.find((c) => String(c.id) === String(ccSelectedCompany));
+                const dest = orgs.find((o) => String(o.id) === String(ccDestOrg));
+                lines.push(`Source company: ${src?.name || '—'} (#${ccSelectedCompany || '—'})`);
+                lines.push(`Destination org: ${dest?.name || '—'} (#${ccDestOrg || '—'})`);
+                lines.push(`New company name: ${ccNewName || '—'}`);
+                break;
+            }
+            case 'user':
+                lines.push(`Base URL: ${cuBaseUrl || '—'}`);
+                lines.push(`Company ID: ${cuCompanyId || '—'}`);
+                lines.push(`Name prefix: ${cuName || '—'} · Count: ${cuCount}`);
+                break;
+            case 'bulk-users-sheet':
+                if (pendingAction === 'bulk-validate') {
+                    lines.push(`File: ${bulkUserFile?.name || '—'}`);
+                    lines.push('This only parses and validates the sheet (no users created).');
+                } else {
+                    lines.push(
+                        bulkPreparedPayload?.prepared?.length
+                            ? `Create users from ${bulkPreparedPayload.prepared.length} parsed row(s) (JSON).`
+                            : `Create users from file: ${bulkUserFile?.name || '—'}.`,
+                    );
+                    lines.push(`Verify email after create: ${bulkVerifyEmailAfterCreate ? 'yes' : 'no'}`);
+                }
+                break;
+            case 'inventory-permissions':
+                lines.push(`Client company ID: ${ipClientCompanyId || '—'}`);
+                lines.push(`Vendor company ID(s): ${ipVendorCompanyIds || '—'}`);
+                lines.push(`Create API client: ${ipCreateApiClient ? 'yes' : 'no'}`);
+                break;
+            default:
+                if (nav?.scriptKey) {
+                    lines.push(`Workflow: ${nav.label}`);
+                    const cfg = SCRIPT_FIELDS[nav.scriptKey];
+                    const v = scriptValues;
+                    if (cfg?.dualScopeSelector) {
+                        lines.push(`Source (${v._sourceScope || 'org'}): ${v.sourceId || '—'}`);
+                        lines.push(`Target (${v._targetScope || 'org'}): ${v.targetId || '—'}`);
+                    } else if (cfg?.scopeSelector && !cfg.dualScopeSelector) {
+                        lines.push(`Scope: ${v._scope || 'org'}`);
+                        lines.push(`Source: ${v.sourceId || '—'}`);
+                        lines.push(`Target: ${v.targetId || '—'}`);
+                    } else if (nav.scriptKey === 'importCustomSearchMenusFromSheet') {
+                        lines.push(`Target org ID: ${v.targetOrgId || '—'}`);
+                        lines.push(
+                            v?.xlsxFileUpload?.filename
+                                ? `Spreadsheet: ${v.xlsxFileUpload.filename}`
+                                : `Path / file: ${v.xlsxPath || '—'}`,
+                        );
+                    } else if (cfg?.fields) {
+                        for (const f of cfg.fields) {
+                            if (f.required === false && !(v[f.key] || '').trim()) continue;
+                            lines.push(`${f.label}: ${(v[f.key] || '').trim() || '—'}`);
+                        }
+                    }
+                }
+                break;
+        }
+        return lines;
+    };
+
     const handleStart = () => {
         if (isRunning || startingRef.current) return;
-        startingRef.current = true;
-        executeStartRef.current();
+        setPendingAction('run');
     };
+
+    const requestBulkValidate = () => {
+        if (bulkUsersValidating || isRunning) return;
+        if (!bulkUserFile) {
+            setToastMessage('Select a spreadsheet first.');
+            return;
+        }
+        setPendingAction('bulk-validate');
+    };
+
+    const confirmPendingAction = () => {
+        const action = pendingAction;
+        setPendingAction(null);
+        if (action === 'bulk-validate') {
+            handleBulkUsersValidateOnly();
+            return;
+        }
+        if (action === 'run') {
+            startingRef.current = true;
+            executeStartRef.current();
+        }
+    };
+
+    const dismissPendingAction = () => setPendingAction(null);
 
     const handleResume = (stepId) => { if (lastRunParams) handleCopyOrg(stepId); };
     const handleRetry = (stepId) => {
@@ -922,6 +1031,7 @@ function App() {
 
     const switchMode = (nextMode) => {
         if (isRunning) return;
+        setPendingAction(null);
         if (mode === 'bulk-users-sheet' && nextMode !== 'bulk-users-sheet') {
             setBulkUserFile(null);
             setBulkPreparedPayload(null);
@@ -1021,7 +1131,7 @@ function App() {
                         bulkUserSheetName={bulkUserSheetName}
                         setBulkUserSheetName={setBulkUserSheetName}
                         disabled={disabled}
-                        onValidateOnly={handleBulkUsersValidateOnly}
+                        onValidateOnly={requestBulkValidate}
                         validating={bulkUsersValidating}
                         hasValidatedPayload={!!bulkPreparedPayload?.prepared?.length}
                         validationUsernames={bulkValidationUsernames}
@@ -1057,7 +1167,7 @@ function App() {
             <div className="flex h-screen">
                 <LeftPanel
                     activeNavItem={activeNavItem} ActiveIcon={ActiveIcon} mode={mode}
-                    isRunning={isRunning} canStart={canStart} dbStatus={dbStatus}
+                    isRunning={isRunning} navigationLocked={navigationLocked} canStart={canStart} dbStatus={dbStatus}
                     canStopExecution={allowStopExecution}
                     historyOpen={historyOpen} setHistoryOpen={setHistoryOpen}
                     onOpenSidebar={() => setSidebarOpen(true)} onStart={handleStart} onStop={handleStop}
@@ -1078,8 +1188,60 @@ function App() {
                     onOpenSidebar={() => setSidebarOpen(true)}
                     currentUserEmail={currentUser?.email}
                     onLogout={handleLogout}
+                    workflowNote={getWorkflowNote(mode)}
                 />
             </div>
+
+            {pendingAction && (
+                <div
+                    className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-4"
+                    onClick={dismissPendingAction}
+                    onKeyDown={(e) => e.key === 'Escape' && dismissPendingAction()}
+                    role="presentation"
+                >
+                    <div
+                        className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                    >
+                        <div className="flex gap-3">
+                            <div className="shrink-0 rounded-lg bg-amber-100 p-2">
+                                <AlertTriangle className="size-5 text-amber-700" strokeWidth={2} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-sm font-semibold text-slate-900">
+                                    {pendingAction === 'bulk-validate' ? 'Confirm validation' : 'Confirm run'}
+                                </h3>
+                                <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                                    This targets your live / production data. Review the summary below and only continue if the org or company IDs and names match what you intend.
+                                </p>
+                                <ul className="mt-3 max-h-52 overflow-y-auto space-y-1.5 rounded-lg border border-slate-100 bg-slate-50/90 px-3 py-2.5 text-[11px] text-slate-800">
+                                    {buildConfirmationLines().map((line, i) => (
+                                        <li key={i} className="leading-snug">{line}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                            <button
+                                type="button"
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                onClick={dismissPendingAction}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                                onClick={confirmPendingAction}
+                            >
+                                {pendingAction === 'bulk-validate' ? 'Yes, validate sheet' : 'Yes, run now'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {bulkUsernameConflictModal && mode === 'bulk-users-sheet' && (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">

@@ -1,8 +1,9 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { SCRIPT_FIELDS } from "./ScriptRunnerForm.jsx";
 import { Select } from "./ui/Select.jsx";
 import { sideInput, sideLabel, fadeIn } from "../constants.js";
+import { fetchCompanyById, fetchCompanyNamesForIds, fetchOrgById } from "../lib/entityLookup.js";
 
 export function OrgForm({
   orgs,
@@ -402,6 +403,26 @@ export function UserForm({
   setCuCount,
   disabled,
 }) {
+  const [companyHint, setCompanyHint] = useState(null);
+  const [companyHintLoading, setCompanyHintLoading] = useState(false);
+  /** 'idle' | 'ok' | 'missing' — avoids flashing “not found” before lookup */
+  const [companyResolveStatus, setCompanyResolveStatus] = useState("idle");
+
+  const onCompanyIdBlur = async () => {
+    const v = String(cuCompanyId || "").trim();
+    if (!/^\d+$/.test(v)) {
+      setCompanyHint(null);
+      setCompanyResolveStatus("idle");
+      return;
+    }
+    setCompanyHintLoading(true);
+    setCompanyResolveStatus("idle");
+    const name = await fetchCompanyById(v);
+    setCompanyHintLoading(false);
+    setCompanyHint(name);
+    setCompanyResolveStatus(name ? "ok" : "missing");
+  };
+
   return (
     <>
       <div>
@@ -447,11 +468,31 @@ export function UserForm({
           <input
             className={sideInput}
             value={cuCompanyId}
-            onChange={(e) => setCuCompanyId(e.target.value)}
-            onBlur={(e) => setCuCompanyId(e.target.value.trim())}
+            onChange={(e) => {
+              setCuCompanyId(e.target.value);
+              setCompanyHint(null);
+              setCompanyResolveStatus("idle");
+            }}
+            onBlur={(e) => {
+              setCuCompanyId(e.target.value.trim());
+              onCompanyIdBlur();
+            }}
             placeholder="e.g. 204542"
             disabled={disabled}
           />
+          {companyHintLoading && (
+            <p className="mt-1 text-[10px] text-slate-400">Looking up company…</p>
+          )}
+          {!companyHintLoading && companyResolveStatus === "ok" && companyHint && (
+            <p className="mt-1 text-[10px] font-semibold text-emerald-800">
+              → {companyHint}
+            </p>
+          )}
+          {!companyHintLoading && companyResolveStatus === "missing" && (
+            <p className="mt-1 text-[10px] text-amber-700">
+              No company found for this ID (check the number or DB connection).
+            </p>
+          )}
         </div>
         <div className="flex-1">
           <label className={sideLabel}>Name Prefix</label>
@@ -492,6 +533,12 @@ export function InventoryPermissionForm({
   setIpProducts,
   disabled,
 }) {
+  const [clientHint, setClientHint] = useState(null);
+  const [clientLoading, setClientLoading] = useState(false);
+  const [clientStatus, setClientStatus] = useState("idle");
+  const [vendorRows, setVendorRows] = useState(null);
+  const [vendorLoading, setVendorLoading] = useState(false);
+
   const productDefs = [
     { key: "diamond", label: "Diamond" },
     { key: "gemstone", label: "Gemstone" },
@@ -501,6 +548,37 @@ export function InventoryPermissionForm({
 
   const toggleProduct = (key) => {
     setIpProducts((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const onClientBlur = async () => {
+    const v = String(ipClientCompanyId || "").trim();
+    if (!/^\d+$/.test(v)) {
+      setClientHint(null);
+      setClientStatus("idle");
+      return;
+    }
+    setClientLoading(true);
+    setClientStatus("idle");
+    const name = await fetchCompanyById(v);
+    setClientLoading(false);
+    setClientHint(name);
+    setClientStatus(name ? "ok" : "missing");
+  };
+
+  const onVendorsBlur = async () => {
+    const raw = String(ipVendorCompanyIds || "").trim();
+    const ids = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => /^\d+$/.test(s));
+    if (ids.length === 0) {
+      setVendorRows(null);
+      return;
+    }
+    setVendorLoading(true);
+    const rows = await fetchCompanyNamesForIds(raw);
+    setVendorLoading(false);
+    setVendorRows(rows);
   };
 
   return (
@@ -519,30 +597,73 @@ export function InventoryPermissionForm({
       </div>
 
       <div>
-        <label className={sideLabel}>Client ID</label>
+        <label className={sideLabel}>Client company ID</label>
         <input
           className={sideInput}
           value={ipClientCompanyId}
-          onChange={(e) => setIpClientCompanyId(e.target.value)}
-          onBlur={(e) => setIpClientCompanyId(e.target.value.trim())}
+          onChange={(e) => {
+            setIpClientCompanyId(e.target.value);
+            setClientHint(null);
+            setClientStatus("idle");
+          }}
+          onBlur={(e) => {
+            setIpClientCompanyId(e.target.value.trim());
+            onClientBlur();
+          }}
           placeholder="e.g. 204542"
           disabled={disabled}
         />
+        {clientLoading && (
+          <p className="mt-1 text-[10px] text-slate-400">Looking up client…</p>
+        )}
+        {!clientLoading && clientStatus === "ok" && clientHint && (
+          <p className="mt-1 text-[10px] font-semibold text-emerald-800">
+            → {clientHint}
+          </p>
+        )}
+        {!clientLoading && clientStatus === "missing" && (
+          <p className="mt-1 text-[10px] text-amber-700">
+            No company found for this client ID.
+          </p>
+        )}
       </div>
 
       <div>
-        <label className={sideLabel}>Vendor ID(s)</label>
+        <label className={sideLabel}>Vendor company ID(s)</label>
         <input
           className={sideInput}
           value={ipVendorCompanyIds}
-          onChange={(e) => setIpVendorCompanyIds(e.target.value)}
-          onBlur={(e) => setIpVendorCompanyIds(e.target.value.trim())}
+          onChange={(e) => {
+            setIpVendorCompanyIds(e.target.value);
+            setVendorRows(null);
+          }}
+          onBlur={(e) => {
+            setIpVendorCompanyIds(e.target.value.trim());
+            onVendorsBlur();
+          }}
           placeholder="e.g. 39416, 91268"
           disabled={disabled}
         />
         <p className="mt-1 text-[10px] text-slate-400">
-          Use comma-separated vendor company IDs for multi-vendor inventory.
+          Comma-separated vendor company IDs for multi-vendor inventory.
         </p>
+        {vendorLoading && (
+          <p className="mt-1 text-[10px] text-slate-400">Looking up vendors…</p>
+        )}
+        {!vendorLoading && vendorRows && vendorRows.length > 0 && (
+          <ul className="mt-1.5 space-y-0.5 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1.5">
+            {vendorRows.map((row) => (
+              <li key={row.id} className="text-[10px] text-slate-700">
+                <span className="font-mono tabular-nums text-slate-500">#{row.id}</span>
+                {row.name ? (
+                  <span className="ml-1.5 font-semibold text-emerald-900">→ {row.name}</span>
+                ) : (
+                  <span className="ml-1.5 text-amber-700">(not found)</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div>
@@ -571,8 +692,6 @@ export function InventoryPermissionForm({
 
 export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
   const sheetFileInputRef = useRef(null);
-  const sampleSheetUrl =
-    "https://docs.google.com/spreadsheets/d/1cFRVoDdhwU9zlCH_q3e-TR5KkRvHuxiy9KmTU4SsaKo/edit?usp=sharing";
   const nav_id = mode;
   const scriptKey = nav_id
     .replace("script-copy-search-menus", "copyCustomSearchMenus")
@@ -682,32 +801,49 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
       reader.readAsDataURL(file);
     });
 
+  const [idHints, setIdHints] = useState({});
+
+  useEffect(() => {
+    setIdHints({});
+  }, [scriptKey, sourceScope, targetScope, currentScope]);
+
+  const fieldIsResolvableId = (f) => {
+    if (scriptKey === "importCustomSearchMenusFromSheet") {
+      if (f.key === "xlsxPath" || f.key === "sheetName") return false;
+    }
+    return true;
+  };
+
+  const resolveFieldHint = async (f, trimmed) => {
+    if (!fieldIsResolvableId(f)) return;
+    if (!/^\d+$/.test(trimmed)) {
+      setIdHints((h) => ({ ...h, [f.key]: null }));
+      return;
+    }
+    let kind = "org";
+    if (scriptKey === "copyCustomSearchMenus") {
+      if (f.key === "sourceId") kind = sourceScope === "company" ? "company" : "org";
+      else if (f.key === "targetId") kind = targetScope === "company" ? "company" : "org";
+    } else if (scriptKey === "copyCustomizations") {
+      kind = currentScope === "company" ? "company" : "org";
+    } else if (scriptKey === "copyOrgWhiteLabel" || scriptKey === "testCustomizations") {
+      kind = "org";
+    } else if (scriptKey === "copyCustomDataAndValues" || scriptKey === "testFeatureActivation") {
+      kind = "company";
+    } else if (scriptKey === "importCustomSearchMenusFromSheet" && f.key === "targetOrgId") {
+      kind = "org";
+    }
+    setIdHints((h) => ({ ...h, [f.key]: { loading: true } }));
+    const name =
+      kind === "org" ? await fetchOrgById(trimmed) : await fetchCompanyById(trimmed);
+    setIdHints((h) => ({
+      ...h,
+      [f.key]: { loading: false, name: name || null },
+    }));
+  };
+
   return (
     <>
-      <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-        <p className="text-[11px] text-amber-700 leading-relaxed">
-          {cfg.description}
-        </p>
-        {scriptKey === "importCustomSearchMenusFromSheet" && (
-          <p className="mt-1 text-[11px] text-amber-800 leading-relaxed">
-            <span className="block">
-              SVG icon / PNG icon columns accept plain URLs (https://…) or Excel hyperlinks to
-              public files—useful for CDN links.
-            </span>
-            <span className="mt-0.5 block">
-              Sample sheet:{" "}
-              <a
-                href={sampleSheetUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="font-semibold underline underline-offset-2 hover:text-amber-900"
-              >
-                Open Google Sheet
-              </a>
-            </span>
-          </p>
-        )}
-      </div>
       {cfg.dualScopeSelector && (
         <>
           <div>
@@ -959,21 +1095,38 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                 </p>
               </div>
             ) : (
-              <input
-                className={sideInput}
-                value={scriptValues[f.key] || ""}
-                onChange={(e) =>
-                  setScriptValues((p) => ({ ...p, [f.key]: e.target.value }))
-                }
-                onBlur={(e) =>
-                  setScriptValues((p) => ({
-                    ...p,
-                    [f.key]: e.target.value.trim(),
-                  }))
-                }
-                placeholder={f.placeholder}
-                disabled={disabled}
-              />
+              <>
+                <input
+                  className={sideInput}
+                  value={scriptValues[f.key] || ""}
+                  onChange={(e) => {
+                    setScriptValues((p) => ({ ...p, [f.key]: e.target.value }));
+                    setIdHints((h) => ({ ...h, [f.key]: null }));
+                  }}
+                  onBlur={async (e) => {
+                    const trimmed = e.target.value.trim();
+                    setScriptValues((p) => ({ ...p, [f.key]: trimmed }));
+                    await resolveFieldHint(f, trimmed);
+                  }}
+                  placeholder={f.placeholder}
+                  disabled={disabled}
+                />
+                {idHints[f.key]?.loading && (
+                  <p className="mt-1 text-[10px] text-slate-400">Looking up…</p>
+                )}
+                {idHints[f.key] && !idHints[f.key].loading && idHints[f.key].name && (
+                  <p className="mt-1 text-[10px] font-semibold text-emerald-800">
+                    → {idHints[f.key].name}
+                  </p>
+                )}
+                {idHints[f.key]?.loading === false &&
+                  idHints[f.key].name == null &&
+                  /^\d+$/.test(String(scriptValues[f.key] || "").trim()) && (
+                    <p className="mt-1 text-[10px] text-amber-700">
+                      No matching record for this ID.
+                    </p>
+                  )}
+              </>
             )}
           </div>
         ))}

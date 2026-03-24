@@ -2,18 +2,24 @@ import {
     Building, Building2, FileCode, Copy, Palette, Zap, FlaskConical, KeyRound, FileSpreadsheet,
 } from 'lucide-react';
 
+/** Sidebar grouping: replication (clone env), create (data & access), sync (copy between existing). */
+export const NAV_SECTIONS = {
+    replication: { id: 'replication', title: 'Replication' },
+    create: { id: 'create', title: 'Create & import' },
+    sync: { id: 'sync', title: 'Copy & sync' },
+};
+
 export const NAV_ITEMS = [
-    { id: 'org', label: 'Copy Organization', icon: Building2, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-    { id: 'company', label: 'Copy Company', icon: Building, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { id: 'bulk-users-sheet', label: 'Bulk users (Excel/CSV)', icon: FileSpreadsheet, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700' },
-    { id: 'script-copy-search-menus', label: 'Copy custom search menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
-    { id: 'script-copy-white-label', label: 'Copy white label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
-    { id: 'script-copy-customizations', label: 'Copy customizations (org/company)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations' },
-    { id: 'script-copy-custom-data', label: 'Copy custom data & values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues' },
-    { id: 'script-test-features', label: 'Copy company feature switches', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
-    { id: 'script-test-customizations', label: 'Test PDP / search customizations', icon: FlaskConical, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testCustomizations' },
-    { id: 'script-import-search-menus-sheet', label: 'Import search menus from sheet', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'importCustomSearchMenusFromSheet' },
-    { id: 'inventory-permissions', label: 'Inventory API Permissions', icon: KeyRound, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700' },
+    { id: 'org', section: 'replication', label: 'Copy organization', icon: Building2, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
+    { id: 'company', section: 'replication', label: 'Copy company', icon: Building, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+    { id: 'script-import-search-menus-sheet', section: 'create', label: 'Import custom menus from sheet', icon: FileCode, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700', scriptKey: 'importCustomSearchMenusFromSheet' },
+    { id: 'bulk-users-sheet', section: 'create', label: 'Bulk users (Excel/CSV)', icon: FileSpreadsheet, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700' },
+    { id: 'inventory-permissions', section: 'create', label: 'Inventory API permissions', icon: KeyRound, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700' },
+    { id: 'script-copy-search-menus', section: 'sync', label: 'Copy custom search menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
+    { id: 'script-copy-white-label', section: 'sync', label: 'Copy white label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
+    { id: 'script-copy-customizations', section: 'sync', label: 'Copy customizations (org / company)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations' },
+    { id: 'script-copy-custom-data', section: 'sync', label: 'Copy custom data & values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues' },
+    { id: 'script-test-features', section: 'sync', label: 'Copy company feature switches', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
 ];
 
 export const STEP_DEFS = {

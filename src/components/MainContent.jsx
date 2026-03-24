@@ -13,6 +13,8 @@ function MainContent({
     steps, logs, overallStatus, runStartTime, selectedOrg,
     onResume, onRetry, onSkip, onOpenSidebar,
     currentUserEmail, onLogout,
+    /** Shown in the idle empty state (hidden while a run is in progress). */
+    workflowNote,
 }) {
     return (
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -88,12 +90,15 @@ function MainContent({
                             </AnimatePresence>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-24 text-center w-full">
+                        <div className="flex flex-col items-center justify-center py-16 text-center w-full max-w-2xl mx-auto px-2">
                             <div className="size-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
                                 <ActiveIcon className="size-7 text-slate-400" strokeWidth={1.5} />
                             </div>
                             <h3 className="text-lg font-semibold text-slate-700 mb-1">{activeNavItem?.label || 'Select a Workflow'}</h3>
-                            <p className="text-sm text-slate-400 max-w-sm">Configure the parameters in the left panel and click Start to begin.</p>
+                            <p className="text-sm text-slate-400 max-w-sm mb-4">Configure the parameters in the left panel and click Start to begin.</p>
+                            {!isRunning && workflowNote ? (
+                                <div className="w-full mt-1">{workflowNote}</div>
+                            ) : null}
                         </div>
                     )}
                 </div>
