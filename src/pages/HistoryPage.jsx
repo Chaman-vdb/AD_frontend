@@ -1,132 +1,40 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft,
     Database,
     Clock,
-    Check,
-    X,
     Loader2,
-    Building2,
-    Building,
-    UserPlus,
-    FileCode,
     Search,
     Filter,
-    Package,
-    UsersRound,
-    CircleDot,
-    Server,
     ChevronRight,
-    Pause,
+    Download,
+    HardDrive,
+    Server,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
 import { apiFetch } from '../lib/api.js';
-
-const MODE_META = {
-    org: { icon: Building2, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200', tag: 'Org copy' },
-    company: { icon: Building, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', tag: 'Company copy' },
-    user: { icon: UserPlus, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', tag: 'Create users' },
-    script: { icon: FileCode, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', tag: 'Script' },
-    'inventory-permissions': { icon: Package, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200', tag: 'Inventory' },
-    'bulk-users-sheet': { icon: UsersRound, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200', tag: 'Bulk users' },
-};
-
-const DEFAULT_MODE_META = { icon: CircleDot, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', tag: 'Task' };
-
-const STATUS_BADGE = {
-    completed: { variant: 'success', icon: Check, label: 'Completed' },
-    failed: { variant: 'destructive', icon: X, label: 'Failed' },
-    running: { variant: 'warning', icon: Loader2, label: 'Running' },
-    pending: { variant: 'secondary', icon: Clock, label: 'Pending' },
-    paused: { variant: 'secondary', icon: Pause, label: 'Paused' },
-};
-
-const MODE_FILTERS = ['all', 'org', 'company', 'user', 'script', 'inventory-permissions', 'bulk-users-sheet'];
-const STATUS_FILTERS = ['all', 'completed', 'failed', 'running', 'paused'];
-
-function formatDate(ts) {
-    const d = new Date(ts);
-    if (Number.isNaN(d.getTime())) return '—';
-    return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
-}
-
-function formatDuration(startedAt, endedAt) {
-    if (!startedAt) return null;
-    const a = new Date(startedAt).getTime();
-    const b = endedAt ? new Date(endedAt).getTime() : Date.now();
-    if (Number.isNaN(a) || Number.isNaN(b) || b < a) return null;
-    const sec = Math.round((b - a) / 1000);
-    if (sec < 60) return `${sec}s`;
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    if (m < 60) return `${m}m ${s}s`;
-    const h = Math.floor(m / 60);
-    return `${h}h ${m % 60}m`;
-}
-
-function stepSummary(steps) {
-    if (!Array.isArray(steps) || steps.length === 0) return null;
-    const total = steps.length;
-    const completed = steps.filter((s) => s.status === 'completed').length;
-    const failed = steps.filter((s) => s.status === 'failed').length;
-    return { total, completed, failed };
-}
-
-/** One-line context from stored request (no secrets). */
-function requestContext(mode, request) {
-    if (!request || typeof request !== 'object') return null;
-    const r = request;
-    if (mode === 'user') {
-        const parts = [];
-        if (r.companyId) parts.push(`Company #${r.companyId}`);
-        if (r.email) parts.push(String(r.email));
-        if (r.numberOfUsers != null) parts.push(`${r.numberOfUsers} user(s)`);
-        return parts.length ? parts.join(' · ') : null;
-    }
-    if (mode === 'company') {
-        const parts = [];
-        if (r.targetOrgId) parts.push(`Org #${r.targetOrgId}`);
-        if (r.sourceCompanyId) parts.push(`from company #${r.sourceCompanyId}`);
-        return parts.length ? parts.join(' · ') : null;
-    }
-    if (mode === 'org') {
-        if (r.sourceOrgId) return `Source org #${r.sourceOrgId}${r.newOrgName ? ` → ${r.newOrgName}` : ''}`;
-        return null;
-    }
-    if (mode === 'inventory-permissions') {
-        if (r.clientCompanyId) return `Client #${r.clientCompanyId}`;
-        return null;
-    }
-    if (mode === 'script' && r.script) return `${r.script}`;
-    if (mode === 'bulk-users-sheet') {
-        if (r.mode === 'json') return 'JSON / prepared rows';
-        if (r.mode === 'multipart') return 'Spreadsheet upload';
-        return null;
-    }
-    return null;
-}
-
-function rowSearchText(r) {
-    const req = r.request && typeof r.request === 'object' ? r.request : {};
-    const flat = [
-        r.label,
-        r.user,
-        r.userEmail,
-        r.mode,
-        r.resultMessage,
-        r.activeEnv,
-        ...Object.values(req).map((v) => (typeof v === 'object' ? JSON.stringify(v) : v)),
-  ].filter(Boolean).map(String);
-    return flat.join(' ').toLowerCase();
-}
+import {
+    MODE_META,
+    DEFAULT_MODE_META,
+    STATUS_BADGE,
+    MODE_FILTERS,
+    STATUS_FILTERS,
+    formatHistoryDate,
+    formatRelativeTime,
+    formatRunDuration,
+    requestContext,
+    rowSearchText,
+    stepSummary,
+} from '../lib/historyMeta.js';
 
 function HistoryPage() {
     const navigate = useNavigate();
     const [runs, setRuns] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -165,27 +73,65 @@ function HistoryPage() {
         paused: runs.filter((r) => r.status === 'paused').length,
     }), [runs]);
 
+    const exportFilteredJson = useCallback(() => {
+        if (filtered.length === 0) return;
+        setExporting(true);
+        try {
+            const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            a.href = URL.createObjectURL(blob);
+            a.download = `task-history-${stamp}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } finally {
+            setExporting(false);
+        }
+    }, [filtered]);
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-50">
-            <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md flex items-center px-6 gap-4 sticky top-0 z-10 shadow-sm shadow-slate-200/50">
-                <Link to="/" className="p-2 rounded-xl hover:bg-slate-100 transition-colors" aria-label="Back to app">
+        <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50/80 to-white">
+            <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md flex items-center px-4 sm:px-6 gap-4 sticky top-0 z-10 shadow-sm shadow-slate-200/50">
+                <Link to="/" className="p-2 rounded-xl hover:bg-slate-100 transition-colors shrink-0" aria-label="Back to app">
                     <ArrowLeft className="size-5 text-slate-600" />
                 </Link>
-                <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25 shrink-0">
                         <Database className="size-5 text-white" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <h1 className="text-lg font-bold text-slate-900 tracking-tight">Task history</h1>
-                        <p className="text-xs text-slate-500">
-                            {loading ? 'Loading…' : `${stats.total} saved run${stats.total === 1 ? '' : 's'} · audits & outcomes`}
+                        <p className="text-xs text-slate-500 truncate">
+                            {loading ? 'Loading…' : `${stats.total} saved run${stats.total === 1 ? '' : 's'} · server-backed audit log`}
                         </p>
                     </div>
                 </div>
                 <div className="flex-1" />
+                <button
+                    type="button"
+                    disabled={filtered.length === 0 || exporting}
+                    onClick={exportFilteredJson}
+                    className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-800 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                    <Download className="size-4" />
+                    Export JSON
+                </button>
             </header>
 
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+                <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-r from-slate-50 to-blue-50/40 px-4 py-3 flex gap-3 items-start shadow-sm">
+                    <div className="p-2 rounded-lg bg-white border border-slate-200/80 shrink-0">
+                        <HardDrive className="size-4 text-blue-600" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed min-w-0">
+                        <p className="font-semibold text-slate-800">Persisted on the server</p>
+                        <p className="mt-0.5 text-slate-600">
+                            Runs, request snapshots, steps, and logs are stored in the backend data file so they remain after refresh or process restarts.
+                            Use <span className="font-mono text-[11px] bg-white/80 px-1 rounded border border-slate-200/80">RUN_HISTORY_PATH</span> on deploy if the disk is ephemeral.
+                        </p>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {[
                         { label: 'Total', value: stats.total, sub: 'all time', className: 'bg-white border-slate-200' },
@@ -203,14 +149,25 @@ function HistoryPage() {
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-                        <input
-                            className="w-full h-10 pl-10 pr-3 text-sm rounded-xl border border-slate-200 bg-slate-50/50 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-colors"
-                            placeholder="Search label, user, email, outcome, env, IDs…"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                            <input
+                                className="w-full h-10 pl-10 pr-3 text-sm rounded-xl border border-slate-200 bg-slate-50/50 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-colors"
+                                placeholder="Search label, run id, user, email, outcome, env, IDs…"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            disabled={filtered.length === 0 || exporting}
+                            onClick={exportFilteredJson}
+                            className="sm:hidden inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40"
+                        >
+                            <Download className="size-4" />
+                            Export JSON
+                        </button>
                     </div>
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -278,9 +235,10 @@ function HistoryPage() {
                                 const Icon = meta.icon;
                                 const sb = STATUS_BADGE[run.status] || STATUS_BADGE.pending;
                                 const SbIcon = sb.icon;
-                                const dur = formatDuration(run.startedAt, run.endedAt);
+                                const dur = formatRunDuration(run);
                                 const ss = stepSummary(run.steps);
                                 const ctx = requestContext(run.mode, run.request);
+                                const stepCount = run.stepCount ?? (Array.isArray(run.steps) ? run.steps.length : 0);
                                 return (
                                     <motion.div
                                         key={run.id}
@@ -309,15 +267,24 @@ function HistoryPage() {
                                                                     <SbIcon className={`size-3 ${run.status === 'running' ? 'animate-spin' : ''}`} strokeWidth={2.5} />
                                                                     {sb.label}
                                                                 </Badge>
+                                                                {stepCount > 0 && (
+                                                                    <span className="text-[10px] font-semibold tabular-nums text-slate-500 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-md">
+                                                                        {run.stepsCompleted != null && run.stepsFailed != null
+                                                                            ? `${run.stepsCompleted}/${stepCount} steps`
+                                                                            : `${stepCount} step${stepCount === 1 ? '' : 's'}`}
+                                                                    </span>
+                                                                )}
                                                             </div>
-                                                            {ctx && <p className="text-xs text-slate-600 mt-1.5 font-medium truncate">{ctx}</p>}
+                                                            <p className="text-[10px] text-slate-400 font-mono mt-1 truncate" title={run.id}>{run.id}</p>
+                                                            {ctx && <p className="text-xs text-slate-600 mt-1 font-medium truncate">{ctx}</p>}
                                                             {run.resultMessage && (
                                                                 <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{run.resultMessage}</p>
                                                             )}
                                                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 text-[11px] text-slate-500">
-                                                                <span className="inline-flex items-center gap-1">
+                                                                <span className="inline-flex items-center gap-1" title={formatHistoryDate(run.startedAt)}>
                                                                     <Clock className="size-3 shrink-0" />
-                                                                    {formatDate(run.startedAt)}
+                                                                    <span className="text-slate-600 font-medium">{formatRelativeTime(run.startedAt)}</span>
+                                                                    <span className="text-slate-400 hidden sm:inline">· {formatHistoryDate(run.startedAt)}</span>
                                                                 </span>
                                                                 {dur && (
                                                                     <span className="inline-flex items-center gap-1 text-slate-600">

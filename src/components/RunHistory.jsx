@@ -1,15 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Clock, Loader2, Trash2, Building2, Building, UserPlus, FileCode } from 'lucide-react';
+import { Check, X, Clock, Loader2, Trash2, Pause } from 'lucide-react';
 import { cn } from '../lib/utils.js';
-
-const MODE_META = {
-    org: { icon: Building2, color: 'text-violet-500', bg: 'bg-violet-50', tag: 'Org Copy' },
-    company: { icon: Building, color: 'text-blue-500', bg: 'bg-blue-50', tag: 'Company Copy' },
-    user: { icon: UserPlus, color: 'text-emerald-500', bg: 'bg-emerald-50', tag: 'Create Users' },
-    script: { icon: FileCode, color: 'text-amber-500', bg: 'bg-amber-50', tag: 'Script' },
-};
+import { MODE_META, DEFAULT_MODE_META, formatRelativeTime } from '../lib/historyMeta.js';
 
 function RunHistory({ runs, activeRunId, onSelectRun, onDeleteRun, navigationLocked = false }) {
     const navigate = useNavigate();
@@ -28,21 +22,36 @@ function RunHistory({ runs, activeRunId, onSelectRun, onDeleteRun, navigationLoc
     const getStatusBadge = (status) => {
         switch (status) {
             case 'completed':
-                return <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5"><Check className="size-2.5" strokeWidth={3} />Done</span>;
+                return (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
+                        <Check className="size-2.5" strokeWidth={3} />Done
+                    </span>
+                );
             case 'failed':
+                return (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-red-600 bg-red-50 border border-red-200 rounded-full px-1.5 py-0.5">
+                        <X className="size-2.5" strokeWidth={3} />Failed
+                    </span>
+                );
             case 'paused':
-                return <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-red-600 bg-red-50 border border-red-200 rounded-full px-1.5 py-0.5"><X className="size-2.5" strokeWidth={3} />Failed</span>;
+                return (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
+                        <Pause className="size-2.5" strokeWidth={2.5} />Paused
+                    </span>
+                );
             case 'running':
-                return <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-1.5 py-0.5"><Loader2 className="size-2.5 animate-spin" strokeWidth={2.5} />Running</span>;
+                return (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-1.5 py-0.5">
+                        <Loader2 className="size-2.5 animate-spin" strokeWidth={2.5} />Running
+                    </span>
+                );
             default:
-                return <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-slate-500 bg-slate-50 border border-slate-200 rounded-full px-1.5 py-0.5">Pending</span>;
+                return (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-slate-500 bg-slate-50 border border-slate-200 rounded-full px-1.5 py-0.5">
+                        Pending
+                    </span>
+                );
         }
-    };
-
-    const formatDate = (ts) => {
-        const d = new Date(ts);
-        return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) +
-            ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
     return (
@@ -50,7 +59,7 @@ function RunHistory({ runs, activeRunId, onSelectRun, onDeleteRun, navigationLoc
             <AnimatePresence>
                 {runs.map((run) => {
                     const isActive = run.id === activeRunId;
-                    const meta = MODE_META[run.mode] || MODE_META.script;
+                    const meta = MODE_META[run.mode] || DEFAULT_MODE_META;
                     const Icon = meta.icon;
                     return (
                         <motion.button
@@ -72,32 +81,40 @@ function RunHistory({ runs, activeRunId, onSelectRun, onDeleteRun, navigationLoc
                             )}
                         >
                             <div className="flex items-start gap-2.5">
-                                <div className={cn('p-1 rounded-md shrink-0 mt-0.5', meta.bg)}>
-                                    <Icon className={cn('size-3', meta.color)} strokeWidth={2} />
+                                <div className={cn('p-1.5 rounded-lg shrink-0 mt-0.5 border', meta.bg, meta.border)}>
+                                    <Icon className={cn('size-3.5', meta.color)} strokeWidth={2} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2">
                                         <span className={cn(
                                             'text-xs font-semibold truncate',
                                             isActive ? 'text-blue-800' : 'text-slate-800'
-                                        )}>
+                                        )}
+                                        >
                                             {run.label}
                                         </span>
                                         {onDeleteRun && (
                                             <button
+                                                type="button"
                                                 onClick={(e) => { e.stopPropagation(); onDeleteRun(run.id); }}
                                                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-50 transition-all shrink-0"
+                                                aria-label="Remove from list"
                                             >
                                                 <Trash2 className="size-3 text-slate-400 hover:text-red-500" />
                                             </button>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                         <span className={cn('text-[9px] font-semibold uppercase tracking-wide', meta.color)}>{meta.tag}</span>
                                         <span className="text-slate-300">|</span>
                                         {getStatusBadge(run.status)}
                                     </div>
-                                    <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(run.startedAt)}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1" title={run.startedAt}>
+                                        {formatRelativeTime(run.startedAt)}
+                                        {run.durationMs != null && (
+                                            <span className="text-slate-400"> · {`${Math.round(run.durationMs / 1000)}s`}</span>
+                                        )}
+                                    </p>
                                     {(run.user || run.userEmail) && (
                                         <p className="text-[10px] text-slate-500 mt-0.5 truncate">
                                             {run.user || 'Unknown'}{run.userEmail ? ` (${run.userEmail})` : ''}

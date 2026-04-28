@@ -80,9 +80,13 @@ function LeftPanel({
                                 ? 'bulk create'
                                 : mode === 'inventory-permissions'
                                   ? 'permissions'
-                                  : mode === 'user'
-                                    ? 'creating users'
-                                    : 'workflow'}
+                                  : mode === 'server-admin'
+                                    ? 'server admin'
+                                    : mode === 'single-user-http'
+                                      ? 'single user'
+                                      : mode === 'user'
+                                        ? 'creating users'
+                                        : 'workflow'}
                     </Button>
                 )}
             </div>

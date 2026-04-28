@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { SCRIPT_FIELDS } from "./ScriptRunnerForm.jsx";
 import { Select } from "./ui/Select.jsx";
 import { sideInput, sideLabel, fadeIn } from "../constants.js";
-import { fetchCompanyById, fetchCompanyNamesForIds, fetchOrgById } from "../lib/entityLookup.js";
+import { fetchCompanyById, fetchCompanyNamesForIds, fetchOrgById, fetchUserById } from "../lib/entityLookup.js";
 
 export function OrgForm({
   orgs,
@@ -522,6 +522,323 @@ export function UserForm({
   );
 }
 
+export function ServerAdminForm({
+  saEmail,
+  setSaEmail,
+  saOrgId,
+  setSaOrgId,
+  saCompanyId,
+  setSaCompanyId,
+  saPassword,
+  setSaPassword,
+  disabled,
+}) {
+  const [orgHint, setOrgHint] = useState(null);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [companyHint, setCompanyHint] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(false);
+
+  const onOrgBlur = async () => {
+    const v = String(saOrgId || "").trim();
+    if (!/^\d+$/.test(v)) {
+      setOrgHint(null);
+      return;
+    }
+    setOrgLoading(true);
+    const name = await fetchOrgById(v);
+    setOrgLoading(false);
+    setOrgHint(name);
+  };
+
+  const onCompanyBlur = async () => {
+    const v = String(saCompanyId || "").trim();
+    if (!/^\d+$/.test(v)) {
+      setCompanyHint(null);
+      return;
+    }
+    setCompanyLoading(true);
+    const name = await fetchCompanyById(v);
+    setCompanyLoading(false);
+    setCompanyHint(name);
+  };
+
+  return (
+    <form
+      className="contents"
+      autoComplete="off"
+      onSubmit={(e) => e.preventDefault()}
+      data-vdb-form="server-admin"
+    >
+      <div className="rounded-lg border border-violet-200 bg-violet-50/90 px-3 py-2">
+        <p className="text-[11px] text-violet-900 leading-relaxed">
+          Creates an <strong>Admin user</strong> via the same form POST as the superadmin UI (
+          <code className="text-[10px]">/superadmin/admin_users</code>
+          ). Uses <strong>STAGE_BASE_URL</strong> and superadmin credentials from the server{" "}
+          <code className="text-[10px]">.env</code>.
+        </p>
+      </div>
+      <div>
+        <label className={sideLabel} htmlFor="vdb-sa-email">
+          Email
+        </label>
+        <input
+          id="vdb-sa-email"
+          name="vdb_server_admin_email"
+          className={sideInput}
+          type="email"
+          autoComplete="email"
+          value={saEmail}
+          onChange={(e) => setSaEmail(e.target.value)}
+          onBlur={(e) => setSaEmail(e.target.value.trim())}
+          placeholder="admin@example.com"
+          disabled={disabled}
+        />
+      </div>
+      <div>
+        <label className={sideLabel} htmlFor="vdb-sa-org-id">
+          Organization ID
+        </label>
+        <input
+          id="vdb-sa-org-id"
+          name="vdb_server_admin_organization_id"
+          className={sideInput}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={saOrgId}
+          onChange={(e) => {
+            setSaOrgId(e.target.value);
+            setOrgHint(null);
+          }}
+          onBlur={(e) => {
+            setSaOrgId(e.target.value.trim());
+            onOrgBlur();
+          }}
+          placeholder="e.g. 1"
+          disabled={disabled}
+        />
+        {orgLoading && (
+          <p className="mt-1 text-[10px] text-slate-400">Looking up org…</p>
+        )}
+        {!orgLoading && orgHint && (
+          <p className="mt-1 text-[10px] font-semibold text-emerald-800">→ {orgHint}</p>
+        )}
+      </div>
+      <div>
+        <label className={sideLabel} htmlFor="vdb-sa-company-id">
+          Company ID
+        </label>
+        <input
+          id="vdb-sa-company-id"
+          name="vdb_server_admin_company_id"
+          className={sideInput}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={saCompanyId}
+          onChange={(e) => {
+            setSaCompanyId(e.target.value);
+            setCompanyHint(null);
+          }}
+          onBlur={(e) => {
+            setSaCompanyId(e.target.value.trim());
+            onCompanyBlur();
+          }}
+          placeholder="e.g. 91140"
+          disabled={disabled}
+        />
+        {companyLoading && (
+          <p className="mt-1 text-[10px] text-slate-400">Looking up company…</p>
+        )}
+        {!companyLoading && companyHint && (
+          <p className="mt-1 text-[10px] font-semibold text-emerald-800">→ {companyHint}</p>
+        )}
+      </div>
+      <div>
+        <label className={sideLabel} htmlFor="vdb-sa-password">
+          Password
+        </label>
+        <input
+          id="vdb-sa-password"
+          name="vdb_server_admin_password"
+          className={sideInput}
+          type="password"
+          autoComplete="new-password"
+          value={saPassword}
+          onChange={(e) => setSaPassword(e.target.value)}
+          onBlur={(e) => setSaPassword(e.target.value.trim())}
+          placeholder="Initial password (confirmation matches)"
+          disabled={disabled}
+        />
+        <p className="mt-1 text-[10px] text-slate-500">
+          Role defaults to <code className="text-slate-600">contributor</code> (override with{" "}
+          <code className="text-slate-600">SERVER_ADMIN_ROLE</code> on the server if needed).
+        </p>
+      </div>
+    </form>
+  );
+}
+
+export function SingleUserHttpForm({
+  suhUsername,
+  setSuhUsername,
+  suhEmail,
+  setSuhEmail,
+  suhOrgId,
+  setSuhOrgId,
+  suhCompanyId,
+  setSuhCompanyId,
+  suhPassword,
+  setSuhPassword,
+  suhVerifyEmailAfterCreate,
+  setSuhVerifyEmailAfterCreate,
+  disabled,
+}) {
+  const [orgHint, setOrgHint] = useState(null);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [companyHint, setCompanyHint] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(false);
+
+  const onOrgBlur = async () => {
+    const v = String(suhOrgId || "").trim();
+    if (!/^\d+$/.test(v)) {
+      setOrgHint(null);
+      return;
+    }
+    setOrgLoading(true);
+    const name = await fetchOrgById(v);
+    setOrgLoading(false);
+    setOrgHint(name);
+  };
+
+  const onCompanyBlur = async () => {
+    const v = String(suhCompanyId || "").trim();
+    if (!/^\d+$/.test(v)) {
+      setCompanyHint(null);
+      return;
+    }
+    setCompanyLoading(true);
+    const name = await fetchCompanyById(v);
+    setCompanyLoading(false);
+    setCompanyHint(name);
+  };
+
+  return (
+    <>
+      <div className="rounded-lg border border-sky-200 bg-sky-50/90 px-3 py-2">
+        <p className="text-[11px] text-sky-900 leading-relaxed">
+          One <strong>end user</strong> via{" "}
+          <code className="text-[10px]">POST /superadmin/users</code> (same as superadmin “New user”). Uses{" "}
+          <code className="text-[10px]">STAGE_BASE_URL</code> and superadmin credentials from the server{" "}
+          <code className="text-[10px]">.env</code>. If you omit optional API fields, the server fills the same defaults as a
+          typical superadmin create: first name <strong>test</strong>, last name <strong>user</strong>, country{" "}
+          <strong>India</strong>, city <strong>Agar</strong> (override with{" "}
+          <code className="text-[10px]">SINGLE_USER_HTTP_FIRST_NAME</code>,{" "}
+          <code className="text-[10px]">SINGLE_USER_HTTP_LAST_NAME</code>,{" "}
+          <code className="text-[10px]">SINGLE_USER_HTTP_COUNTRY</code>, <code className="text-[10px]">SINGLE_USER_HTTP_CITY</code>
+          , <code className="text-[10px]">SINGLE_USER_HTTP_STATE</code>).
+        </p>
+      </div>
+      <div>
+        <label className={sideLabel}>Username</label>
+        <input
+          className={sideInput}
+          value={suhUsername}
+          onChange={(e) => setSuhUsername(e.target.value)}
+          onBlur={(e) => setSuhUsername(e.target.value.trim())}
+          placeholder="Unique login / username"
+          disabled={disabled}
+        />
+      </div>
+      <div>
+        <label className={sideLabel}>Email</label>
+        <input
+          className={sideInput}
+          type="email"
+          value={suhEmail}
+          onChange={(e) => setSuhEmail(e.target.value)}
+          onBlur={(e) => setSuhEmail(e.target.value.trim())}
+          placeholder="user@example.com"
+          disabled={disabled}
+        />
+      </div>
+      <div>
+        <label className={sideLabel}>Organization ID</label>
+        <input
+          className={sideInput}
+          value={suhOrgId}
+          onChange={(e) => {
+            setSuhOrgId(e.target.value);
+            setOrgHint(null);
+          }}
+          onBlur={(e) => {
+            setSuhOrgId(e.target.value.trim());
+            onOrgBlur();
+          }}
+          placeholder="e.g. 1"
+          disabled={disabled}
+        />
+        {orgLoading && (
+          <p className="mt-1 text-[10px] text-slate-400">Looking up org…</p>
+        )}
+        {!orgLoading && orgHint && (
+          <p className="mt-1 text-[10px] font-semibold text-emerald-800">→ {orgHint}</p>
+        )}
+      </div>
+      <div>
+        <label className={sideLabel}>Company ID</label>
+        <input
+          className={sideInput}
+          value={suhCompanyId}
+          onChange={(e) => {
+            setSuhCompanyId(e.target.value);
+            setCompanyHint(null);
+          }}
+          onBlur={(e) => {
+            setSuhCompanyId(e.target.value.trim());
+            onCompanyBlur();
+          }}
+          placeholder="e.g. 91140"
+          disabled={disabled}
+        />
+        {companyLoading && (
+          <p className="mt-1 text-[10px] text-slate-400">Looking up company…</p>
+        )}
+        {!companyLoading && companyHint && (
+          <p className="mt-1 text-[10px] font-semibold text-emerald-800">→ {companyHint}</p>
+        )}
+      </div>
+      <div>
+        <label className={sideLabel}>Password</label>
+        <input
+          className={sideInput}
+          type="password"
+          value={suhPassword}
+          onChange={(e) => setSuhPassword(e.target.value)}
+          onBlur={(e) => setSuhPassword(e.target.value.trim())}
+          placeholder="Initial password"
+          disabled={disabled}
+        />
+      </div>
+      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+        <input
+          type="checkbox"
+          className="mt-0.5 rounded border-slate-300"
+          checked={!!suhVerifyEmailAfterCreate}
+          onChange={(e) => setSuhVerifyEmailAfterCreate(e.target.checked)}
+          disabled={disabled}
+        />
+        <span className="text-[11px] text-slate-700 leading-snug">
+          <span className="font-semibold text-slate-800">Mark email verified</span> after create — looks up{" "}
+          <code className="text-[10px] text-slate-600">users.id</code> by email + company, then{" "}
+          <code className="text-[10px] text-slate-600">PATCH</code> superadmin edit (same as bulk users: scraped form +{" "}
+          <code className="text-[10px] text-slate-600">user[confirmed?]</code>).
+        </span>
+      </label>
+    </>
+  );
+}
+
 export function InventoryPermissionForm({
   ipClientCompanyId,
   setIpClientCompanyId,
@@ -711,24 +1028,59 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
   const currentScope = scriptValues._scope || "org";
   const sourceScope = scriptValues._sourceScope || "org";
   const targetScope = scriptValues._targetScope || "org";
-  const activeFields = cfg.dualScopeSelector
+  const customizationSourceScope = scriptValues._customizationSourceScope || "org";
+  const customizationTargetScope = scriptValues._customizationTargetScope || "org";
+  const activeFields = cfg.customizationEntityScopes
     ? [
         {
           key: "sourceId",
           label:
-            sourceScope === "company" ? "Source Company ID" : "Source Org ID",
-          placeholder: sourceScope === "company" ? "e.g. 39416" : "e.g. 500",
+            customizationSourceScope === "company"
+              ? "Source Company ID"
+              : customizationSourceScope === "user"
+                ? "Source User ID"
+                : "Source Org ID",
+          placeholder:
+            customizationSourceScope === "company"
+              ? "e.g. 39416"
+              : customizationSourceScope === "user"
+                ? "e.g. 120883"
+                : "e.g. 832",
         },
         {
           key: "targetId",
           label:
-            targetScope === "company" ? "Target Company ID" : "Target Org ID",
-          placeholder: targetScope === "company" ? "e.g. 91549" : "e.g. 945",
+            customizationTargetScope === "company"
+              ? "Target Company ID"
+              : customizationTargetScope === "user"
+                ? "Target User ID"
+                : "Target Org ID",
+          placeholder:
+            customizationTargetScope === "company"
+              ? "e.g. 91268"
+              : customizationTargetScope === "user"
+                ? "e.g. 120884"
+                : "e.g. 945",
         },
       ]
-    : cfg.scopeSelector
-      ? cfg.fieldsByScope?.[currentScope] || cfg.fields
-      : cfg.fields;
+    : cfg.dualScopeSelector
+      ? [
+          {
+            key: "sourceId",
+            label:
+              sourceScope === "company" ? "Source Company ID" : "Source Org ID",
+            placeholder: sourceScope === "company" ? "e.g. 39416" : "e.g. 500",
+          },
+          {
+            key: "targetId",
+            label:
+              targetScope === "company" ? "Target Company ID" : "Target Org ID",
+            placeholder: targetScope === "company" ? "e.g. 91549" : "e.g. 945",
+          },
+        ]
+      : cfg.scopeSelector
+        ? cfg.fieldsByScope?.[currentScope] || cfg.fields
+        : cfg.fields;
   const customizationTypeOptions = [
     { value: "global", label: "Global", defaultSelected: true },
     { value: "custom_texts", label: "Custom Texts", defaultSelected: true },
@@ -805,7 +1157,14 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
 
   useEffect(() => {
     setIdHints({});
-  }, [scriptKey, sourceScope, targetScope, currentScope]);
+  }, [
+    scriptKey,
+    sourceScope,
+    targetScope,
+    currentScope,
+    customizationSourceScope,
+    customizationTargetScope,
+  ]);
 
   const fieldIsResolvableId = (f) => {
     if (scriptKey === "importCustomSearchMenusFromSheet") {
@@ -825,7 +1184,23 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
       if (f.key === "sourceId") kind = sourceScope === "company" ? "company" : "org";
       else if (f.key === "targetId") kind = targetScope === "company" ? "company" : "org";
     } else if (scriptKey === "copyCustomizations") {
-      kind = currentScope === "company" ? "company" : "org";
+      if (f.key === "sourceId") {
+        kind =
+          customizationSourceScope === "company"
+            ? "company"
+            : customizationSourceScope === "user"
+              ? "user"
+              : "org";
+      } else if (f.key === "targetId") {
+        kind =
+          customizationTargetScope === "company"
+            ? "company"
+            : customizationTargetScope === "user"
+              ? "user"
+              : "org";
+      } else {
+        kind = "org";
+      }
     } else if (scriptKey === "copyOrgWhiteLabel" || scriptKey === "testCustomizations") {
       kind = "org";
     } else if (scriptKey === "copyCustomDataAndValues" || scriptKey === "testFeatureActivation") {
@@ -835,7 +1210,11 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
     }
     setIdHints((h) => ({ ...h, [f.key]: { loading: true } }));
     const name =
-      kind === "org" ? await fetchOrgById(trimmed) : await fetchCompanyById(trimmed);
+      kind === "org"
+        ? await fetchOrgById(trimmed)
+        : kind === "user"
+          ? await fetchUserById(trimmed)
+          : await fetchCompanyById(trimmed);
     setIdHints((h) => ({
       ...h,
       [f.key]: { loading: false, name: name || null },
@@ -844,6 +1223,110 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
 
   return (
     <>
+      {cfg.customizationEntityScopes && (
+        <>
+          <div>
+            <label className={sideLabel}>Source entity</label>
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() =>
+                  !disabled &&
+                  setScriptValues((p) => ({ ...p, _customizationSourceScope: "org" }))
+                }
+                disabled={disabled}
+                className={`flex-1 px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  customizationSourceScope === "org"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                } disabled:opacity-50`}
+              >
+                Org
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  !disabled &&
+                  setScriptValues((p) => ({ ...p, _customizationSourceScope: "company" }))
+                }
+                disabled={disabled}
+                className={`flex-1 px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  customizationSourceScope === "company"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                } disabled:opacity-50`}
+              >
+                Company
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  !disabled &&
+                  setScriptValues((p) => ({ ...p, _customizationSourceScope: "user" }))
+                }
+                disabled={disabled}
+                className={`flex-1 px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  customizationSourceScope === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                } disabled:opacity-50`}
+              >
+                User
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className={sideLabel}>Target entity</label>
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() =>
+                  !disabled &&
+                  setScriptValues((p) => ({ ...p, _customizationTargetScope: "org" }))
+                }
+                disabled={disabled}
+                className={`flex-1 px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  customizationTargetScope === "org"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                } disabled:opacity-50`}
+              >
+                Org
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  !disabled &&
+                  setScriptValues((p) => ({ ...p, _customizationTargetScope: "company" }))
+                }
+                disabled={disabled}
+                className={`flex-1 px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  customizationTargetScope === "company"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                } disabled:opacity-50`}
+              >
+                Company
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  !disabled &&
+                  setScriptValues((p) => ({ ...p, _customizationTargetScope: "user" }))
+                }
+                disabled={disabled}
+                className={`flex-1 px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  customizationTargetScope === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                } disabled:opacity-50`}
+              >
+                User
+              </button>
+            </div>
+          </div>
+        </>
+      )}
       {cfg.dualScopeSelector && (
         <>
           <div>
@@ -918,7 +1401,7 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
           </div>
         </>
       )}
-      {cfg.scopeSelector && !cfg.dualScopeSelector && (
+      {cfg.scopeSelector && !cfg.dualScopeSelector && !cfg.customizationEntityScopes && (
         <div>
           <label className={sideLabel}>Scope</label>
           <div className="flex rounded-lg border border-slate-200 overflow-hidden">

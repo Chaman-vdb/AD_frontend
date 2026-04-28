@@ -6,7 +6,7 @@ import { SCRIPT_FIELDS } from './components/ScriptRunnerForm.jsx';
 import { Sidebar } from './components/Sidebar.jsx';
 import LeftPanel from './components/LeftPanel.jsx';
 import MainContent from './components/MainContent.jsx';
-import { OrgForm, CompanyForm, UserForm, InventoryPermissionForm, ScriptForm, BulkUsersSheetForm } from './components/SidebarForms.jsx';
+import { OrgForm, CompanyForm, UserForm, ServerAdminForm, SingleUserHttpForm, InventoryPermissionForm, ScriptForm, BulkUsersSheetForm } from './components/SidebarForms.jsx';
 import { NAV_ITEMS, STEP_DEFS } from './constants.js';
 import { getWorkflowNote } from './workflowNotes.jsx';
 import { apiFetch, readNdjsonBulkRunResponse } from './lib/api.js';
@@ -73,6 +73,18 @@ function App() {
     const [cuCompanyId, setCuCompanyId] = useState('');
     const [cuName, setCuName] = useState('');
     const [cuCount, setCuCount] = useState(3);
+
+    const [saEmail, setSaEmail] = useState('');
+    const [saOrgId, setSaOrgId] = useState('');
+    const [saCompanyId, setSaCompanyId] = useState('');
+    const [saPassword, setSaPassword] = useState('');
+
+    const [suhUsername, setSuhUsername] = useState('');
+    const [suhEmail, setSuhEmail] = useState('');
+    const [suhOrgId, setSuhOrgId] = useState('');
+    const [suhCompanyId, setSuhCompanyId] = useState('');
+    const [suhPassword, setSuhPassword] = useState('');
+    const [suhVerifyEmailAfterCreate, setSuhVerifyEmailAfterCreate] = useState(false);
 
     const [bulkUserFile, setBulkUserFile] = useState(null);
     const [bulkUserSheetName, setBulkUserSheetName] = useState('');
@@ -238,6 +250,8 @@ function App() {
         if (modeId === 'company') return STEP_DEFS.company;
         if (modeId === 'user') return STEP_DEFS.user;
         if (modeId === 'bulk-users-sheet') return STEP_DEFS.bulkUsersSheet;
+        if (modeId === 'server-admin') return STEP_DEFS.serverAdmin;
+        if (modeId === 'single-user-http') return STEP_DEFS.singleUserHttp;
         if (modeId === 'inventory-permissions') return STEP_DEFS.inventoryPermissions;
         const nav = NAV_ITEMS.find(n => n.id === modeId);
         if (nav?.scriptKey && STEP_DEFS[nav.scriptKey]) return STEP_DEFS[nav.scriptKey];
@@ -425,6 +439,96 @@ function App() {
         } finally { abortRef.current = null; startingRef.current = false; setIsRunning(false); }
     };
 
+    const handleCreateServerAdmin = async () => {
+        if (!saEmail.trim() || !saPassword || !saOrgId.trim() || !saCompanyId.trim()) return;
+        const ctrl = new AbortController(); abortRef.current = ctrl;
+        setIsRunning(true); setIsPaused(false); setRunStartTime(new Date());
+        setLogs([{ type: 'progress', message: 'Creating server admin via superadmin…', timestamp: new Date().toISOString() }]);
+        initSteps('server-admin');
+        const params = {
+            email: trimText(saEmail),
+            organizationId: trimText(saOrgId),
+            companyId: trimText(saCompanyId),
+            password: trimText(saPassword),
+        };
+        const runId = `run-${Date.now()}`;
+        setCurrentRunId(runId);
+        addToHistory({
+            id: runId,
+            label: `Server admin: ${params.email}`,
+            status: 'running',
+            startedAt: new Date().toISOString(),
+            mode: 'server-admin',
+            user: getUsername(),
+            userEmail: getUserEmail(),
+            request: { email: params.email, organizationId: params.organizationId, companyId: params.companyId },
+        });
+        setActiveHistoryId(runId);
+        const runEvents = [];
+        try {
+            const res = await apiFetch('/api/replicate/create-server-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...params, runId }),
+                signal: ctrl.signal,
+            });
+            await readSSE(res, runEvents);
+            const hasFailed = stepsRef.current.some(s => s.status === 'failed');
+            updateHistoryRun(runId, { status: hasFailed ? 'failed' : 'completed', endedAt: new Date().toISOString(), steps: serializeSteps(), events: runEvents, resultMessage: getResultMessage(runEvents) });
+        } catch (err) {
+            if (err.name !== 'AbortError') { setLogs(prev => [...prev, { type: 'error', message: `Connection error: ${err.message}`, timestamp: new Date().toISOString() }]); updateHistoryRun(runId, { status: 'failed', endedAt: new Date().toISOString(), steps: serializeSteps(), events: runEvents, resultMessage: err.message }); }
+        } finally { abortRef.current = null; startingRef.current = false; setIsRunning(false); }
+    };
+
+    const handleCreateSingleUserHttp = async () => {
+        if (!suhUsername.trim() || !suhEmail.trim() || !suhPassword || !suhOrgId.trim() || !suhCompanyId.trim()) return;
+        const ctrl = new AbortController(); abortRef.current = ctrl;
+        setIsRunning(true); setIsPaused(false); setRunStartTime(new Date());
+        setLogs([{ type: 'progress', message: 'Creating user via superadmin (HTTP)…', timestamp: new Date().toISOString() }]);
+        initSteps('single-user-http');
+        const params = {
+            username: trimText(suhUsername),
+            email: trimText(suhEmail),
+            organizationId: trimText(suhOrgId),
+            companyId: trimText(suhCompanyId),
+            password: trimText(suhPassword),
+            verifyEmail: !!suhVerifyEmailAfterCreate,
+        };
+        const runId = `run-${Date.now()}`;
+        setCurrentRunId(runId);
+        addToHistory({
+            id: runId,
+            label: `User (HTTP): ${params.email}`,
+            status: 'running',
+            startedAt: new Date().toISOString(),
+            mode: 'single-user-http',
+            user: getUsername(),
+            userEmail: getUserEmail(),
+            request: {
+                username: params.username,
+                email: params.email,
+                organizationId: params.organizationId,
+                companyId: params.companyId,
+                verifyEmail: params.verifyEmail,
+            },
+        });
+        setActiveHistoryId(runId);
+        const runEvents = [];
+        try {
+            const res = await apiFetch('/api/replicate/create-single-user-http', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...params, runId }),
+                signal: ctrl.signal,
+            });
+            await readSSE(res, runEvents);
+            const hasFailed = stepsRef.current.some(s => s.status === 'failed');
+            updateHistoryRun(runId, { status: hasFailed ? 'failed' : 'completed', endedAt: new Date().toISOString(), steps: serializeSteps(), events: runEvents, resultMessage: getResultMessage(runEvents) });
+        } catch (err) {
+            if (err.name !== 'AbortError') { setLogs(prev => [...prev, { type: 'error', message: `Connection error: ${err.message}`, timestamp: new Date().toISOString() }]); updateHistoryRun(runId, { status: 'failed', endedAt: new Date().toISOString(), steps: serializeSteps(), events: runEvents, resultMessage: err.message }); }
+        } finally { abortRef.current = null; startingRef.current = false; setIsRunning(false); }
+    };
+
     const handleInventoryPermissions = async () => {
         const selectedProducts = Object.entries(ipProducts)
             .filter(([, enabled]) => !!enabled)
@@ -488,7 +592,32 @@ function App() {
         const currentScope = scriptValues._scope || 'org';
         const sourceScope = scriptValues._sourceScope || 'org';
         const targetScope = scriptValues._targetScope || 'org';
-        const activeFields = config.dualScopeSelector
+        const customizationSourceScope = scriptValues._customizationSourceScope || 'org';
+        const customizationTargetScope = scriptValues._customizationTargetScope || 'org';
+        const activeFields = config.customizationEntityScopes
+            ? [
+                {
+                    key: 'sourceId',
+                    label:
+                        customizationSourceScope === 'company'
+                            ? 'Source Company ID'
+                            : customizationSourceScope === 'user'
+                              ? 'Source User ID'
+                              : 'Source Org ID',
+                    placeholder: '',
+                },
+                {
+                    key: 'targetId',
+                    label:
+                        customizationTargetScope === 'company'
+                            ? 'Target Company ID'
+                            : customizationTargetScope === 'user'
+                              ? 'Target User ID'
+                              : 'Target Org ID',
+                    placeholder: '',
+                },
+            ]
+            : config.dualScopeSelector
             ? [
                 { key: 'sourceId', label: sourceScope === 'company' ? 'Source Company ID' : 'Source Org ID', placeholder: '' },
                 { key: 'targetId', label: targetScope === 'company' ? 'Target Company ID' : 'Target Org ID', placeholder: '' },
@@ -523,7 +652,7 @@ function App() {
             const sourceId = args[0];
             const targetId = args[1];
             args.length = 0;
-            args.push(currentScope, sourceId, targetId, sectionsCsv);
+            args.push(customizationSourceScope, sourceId, customizationTargetScope, targetId, sectionsCsv);
         } else if (navItem.scriptKey === 'copyCustomDataAndValues') {
             const selectedSections = Array.isArray(scriptValues._customDataSections)
                 ? scriptValues._customDataSections
@@ -905,6 +1034,8 @@ function App() {
             case 'org': handleCopyOrg(); break;
             case 'company': handleCopyCompany(); break;
             case 'user': handleCreateUser(); break;
+            case 'server-admin': handleCreateServerAdmin(); break;
+            case 'single-user-http': handleCreateSingleUserHttp(); break;
             case 'bulk-users-sheet': handleBulkUsersSheetRun(); break;
             case 'inventory-permissions': handleInventoryPermissions(); break;
             default: handleRunScript(); break;
@@ -935,6 +1066,22 @@ function App() {
                 lines.push(`Base URL: ${cuBaseUrl || '—'}`);
                 lines.push(`Company ID: ${cuCompanyId || '—'}`);
                 lines.push(`Name prefix: ${cuName || '—'} · Count: ${cuCount}`);
+                break;
+            case 'server-admin':
+                lines.push(`Email: ${saEmail || '—'}`);
+                lines.push(`Organization ID: ${saOrgId || '—'}`);
+                lines.push(`Company ID: ${saCompanyId || '—'}`);
+                lines.push('Password: (set)');
+                lines.push('Uses STAGE_BASE_URL + superadmin login from server .env');
+                break;
+            case 'single-user-http':
+                lines.push(`Username: ${suhUsername || '—'}`);
+                lines.push(`Email: ${suhEmail || '—'}`);
+                lines.push(`Organization ID: ${suhOrgId || '—'}`);
+                lines.push(`Company ID: ${suhCompanyId || '—'}`);
+                lines.push('Password: (set)');
+                lines.push(`Mark email verified after create: ${suhVerifyEmailAfterCreate ? 'yes' : 'no'}`);
+                lines.push('POST /superadmin/users — name/country/city from defaults if not overridden');
                 break;
             case 'bulk-users-sheet':
                 if (pendingAction === 'bulk-validate') {
@@ -1066,6 +1213,8 @@ function App() {
             case 'org': return !!selectedOrg && !!newOrgName.trim();
             case 'company': return !!ccDestOrg && !!ccSelectedCompany && !!ccNewName.trim();
             case 'user': return !!(cuBaseUrl.trim() && cuEmail.trim() && cuPassword.trim() && cuCompanyId.trim() && cuName.trim() && Number(cuCount) > 0);
+            case 'server-admin': return !!(saEmail.trim() && saPassword && saOrgId.trim() && saCompanyId.trim());
+            case 'single-user-http': return !!(suhUsername.trim() && suhEmail.trim() && suhPassword && suhOrgId.trim() && suhCompanyId.trim());
             case 'bulk-users-sheet': return !!(bulkUserFile || (bulkPreparedPayload?.prepared?.length > 0));
             case 'inventory-permissions': {
                 const vendorIds = ipVendorCompanyIds.split(',').map(v => v.trim()).filter(Boolean);
@@ -1123,6 +1272,38 @@ function App() {
                 return <CompanyForm orgs={orgs} ccSourceOrg={ccSourceOrg} setCcSourceOrg={setCcSourceOrg} ccCompanies={ccCompanies} ccSelectedCompany={ccSelectedCompany} setCcSelectedCompany={setCcSelectedCompany} ccDestOrg={ccDestOrg} setCcDestOrg={setCcDestOrg} ccNewName={ccNewName} setCcNewName={setCcNewName} disabled={disabled} />;
             case 'user':
                 return <UserForm cuBaseUrl={cuBaseUrl} setCuBaseUrl={setCuBaseUrl} cuEmail={cuEmail} setCuEmail={setCuEmail} cuPassword={cuPassword} setCuPassword={setCuPassword} cuCompanyId={cuCompanyId} setCuCompanyId={setCuCompanyId} cuName={cuName} setCuName={setCuName} cuCount={cuCount} setCuCount={setCuCount} disabled={disabled} />;
+            case 'server-admin':
+                return (
+                    <ServerAdminForm
+                        saEmail={saEmail}
+                        setSaEmail={setSaEmail}
+                        saOrgId={saOrgId}
+                        setSaOrgId={setSaOrgId}
+                        saCompanyId={saCompanyId}
+                        setSaCompanyId={setSaCompanyId}
+                        saPassword={saPassword}
+                        setSaPassword={setSaPassword}
+                        disabled={disabled}
+                    />
+                );
+            case 'single-user-http':
+                return (
+                    <SingleUserHttpForm
+                        suhUsername={suhUsername}
+                        setSuhUsername={setSuhUsername}
+                        suhEmail={suhEmail}
+                        setSuhEmail={setSuhEmail}
+                        suhOrgId={suhOrgId}
+                        setSuhOrgId={setSuhOrgId}
+                        suhCompanyId={suhCompanyId}
+                        setSuhCompanyId={setSuhCompanyId}
+                        suhPassword={suhPassword}
+                        setSuhPassword={setSuhPassword}
+                        suhVerifyEmailAfterCreate={suhVerifyEmailAfterCreate}
+                        setSuhVerifyEmailAfterCreate={setSuhVerifyEmailAfterCreate}
+                        disabled={disabled}
+                    />
+                );
             case 'bulk-users-sheet':
                 return (
                     <BulkUsersSheetForm

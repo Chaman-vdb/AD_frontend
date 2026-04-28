@@ -1,5 +1,5 @@
 import {
-    Building, Building2, FileCode, Copy, Palette, Zap, FlaskConical, KeyRound, FileSpreadsheet,
+    Building, Building2, FileCode, Copy, Palette, Zap, FlaskConical, KeyRound, FileSpreadsheet, UserCog, User,
 } from 'lucide-react';
 
 /** Sidebar grouping: replication (clone env), create (data & access), sync (copy between existing). */
@@ -15,9 +15,11 @@ export const NAV_ITEMS = [
     { id: 'script-import-search-menus-sheet', section: 'create', label: 'Import custom menus from sheet', icon: FileCode, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700', scriptKey: 'importCustomSearchMenusFromSheet' },
     { id: 'bulk-users-sheet', section: 'create', label: 'Bulk users (Excel/CSV)', icon: FileSpreadsheet, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700' },
     { id: 'inventory-permissions', section: 'create', label: 'Inventory API permissions', icon: KeyRound, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700' },
+    { id: 'server-admin', section: 'create', label: 'Create server admin', icon: UserCog, iconBg: 'bg-violet-100', iconColor: 'text-violet-700' },
+    { id: 'single-user-http', section: 'create', label: 'Create single user (superadmin)', icon: User, iconBg: 'bg-sky-100', iconColor: 'text-sky-700' },
     { id: 'script-copy-search-menus', section: 'sync', label: 'Copy custom search menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
     { id: 'script-copy-white-label', section: 'sync', label: 'Copy white label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
-    { id: 'script-copy-customizations', section: 'sync', label: 'Copy customizations (org / company)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations' },
+    { id: 'script-copy-customizations', section: 'sync', label: 'Copy customizations (org / company / user)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations' },
     { id: 'script-copy-custom-data', section: 'sync', label: 'Copy custom data & values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues' },
     { id: 'script-test-features', section: 'sync', label: 'Copy company feature switches', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
 ];
@@ -75,6 +77,15 @@ export const STEP_DEFS = {
     ],
     bulkUsersSheet: [
         { id: 'upload-run', label: 'POST create users + DB lookup + email verified' },
+    ],
+    serverAdmin: [
+        { id: 'validate-fields', label: 'Validate Input Fields' },
+        { id: 'create-server-admin', label: 'POST /superadmin/admin_users' },
+    ],
+    singleUserHttp: [
+        { id: 'validate-fields', label: 'Validate Input Fields' },
+        { id: 'post-superadmin-user', label: 'POST /superadmin/users' },
+        { id: 'verify-email-patch', label: 'Verify email (PATCH user)' },
     ],
 };
 

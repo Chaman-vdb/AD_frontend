@@ -25,18 +25,8 @@ const SCRIPT_FIELDS = {
     copyCustomizations: {
         title: 'Copy customizations',
         description:
-            'Copies selected sections: global texts, custom texts, JSON nav menu, and optionally PDP / search form / search result / product unified page rows from the customizations table.',
-        scopeSelector: true,
-        fieldsByScope: {
-            org: [
-                { key: 'sourceId', label: 'Source Org ID', placeholder: 'e.g. 832' },
-                { key: 'targetId', label: 'Target Org ID', placeholder: 'e.g. 945' },
-            ],
-            company: [
-                { key: 'sourceId', label: 'Source Company ID', placeholder: 'e.g. 39416' },
-                { key: 'targetId', label: 'Target Company ID', placeholder: 'e.g. 91268' },
-            ],
-        },
+            'Copies selected sections between organizations, companies, and/or users: global texts, custom texts, JSON nav menu, and optionally PDP / search / unified layout rows. Source and target entity types can differ (e.g. org → company, org → user).',
+        customizationEntityScopes: true,
         fields: [
             { key: 'sourceId', label: 'Source ID', placeholder: 'e.g. 832' },
             { key: 'targetId', label: 'Target ID', placeholder: 'e.g. 945' },
@@ -88,10 +78,45 @@ function ScriptRunnerForm({ scriptKey, isRunning, onSubmit }) {
     const [scope, setScope] = useState('org');
     const [sourceScope, setSourceScope] = useState('org');
     const [targetScope, setTargetScope] = useState('org');
+    const [customizationSourceScope, setCustomizationSourceScope] = useState('org');
+    const [customizationTargetScope, setCustomizationTargetScope] = useState('org');
 
     if (!config) return null;
 
-    const activeFields = config.dualScopeSelector
+    const activeFields = config.customizationEntityScopes
+        ? [
+            {
+                key: 'sourceId',
+                label:
+                    customizationSourceScope === 'company'
+                        ? 'Source Company ID'
+                        : customizationSourceScope === 'user'
+                          ? 'Source User ID'
+                          : 'Source Org ID',
+                placeholder:
+                    customizationSourceScope === 'company'
+                        ? 'e.g. 39416'
+                        : customizationSourceScope === 'user'
+                          ? 'e.g. 120883'
+                          : 'e.g. 832',
+            },
+            {
+                key: 'targetId',
+                label:
+                    customizationTargetScope === 'company'
+                        ? 'Target Company ID'
+                        : customizationTargetScope === 'user'
+                          ? 'Target User ID'
+                          : 'Target Org ID',
+                placeholder:
+                    customizationTargetScope === 'company'
+                        ? 'e.g. 91268'
+                        : customizationTargetScope === 'user'
+                          ? 'e.g. 120884'
+                          : 'e.g. 945',
+            },
+        ]
+        : config.dualScopeSelector
         ? [
             {
                 key: 'sourceId',
@@ -125,7 +150,18 @@ function ScriptRunnerForm({ scriptKey, isRunning, onSubmit }) {
             .map((f) => ({ ...f, value: (values[f.key] || '').trim() }))
             .filter((f) => !(f.required === false && !f.value))
             .map((f) => f.value);
-        if (config.dualScopeSelector) {
+        if (config.customizationEntityScopes) {
+            const sourceId = args[0];
+            const targetId = args[1];
+            args.length = 0;
+            args.push(
+                customizationSourceScope,
+                sourceId,
+                customizationTargetScope,
+                targetId,
+                'global,custom_texts,json_navigation_menu',
+            );
+        } else if (config.dualScopeSelector) {
             args.push(sourceScope, targetScope);
         } else if (config.scopeSelector) {
             args.push(scope);
@@ -138,6 +174,93 @@ function ScriptRunnerForm({ scriptKey, isRunning, onSubmit }) {
             <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3">
                 <p className="text-sm text-amber-800">{config.description}</p>
             </div>
+
+            {config.customizationEntityScopes && (
+                <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-amber-50 text-amber-600">
+                            <Hash className="size-3.5" />
+                        </div>
+                        Source entity
+                    </Label>
+                    <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => setCustomizationSourceScope('org')}
+                            className={`flex-1 px-2 py-2 text-xs font-semibold transition-colors ${
+                                customizationSourceScope === 'org'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                            }`}
+                        >
+                            Org
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCustomizationSourceScope('company')}
+                            className={`flex-1 px-2 py-2 text-xs font-semibold transition-colors ${
+                                customizationSourceScope === 'company'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                            }`}
+                        >
+                            Company
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCustomizationSourceScope('user')}
+                            className={`flex-1 px-2 py-2 text-xs font-semibold transition-colors ${
+                                customizationSourceScope === 'user'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                            }`}
+                        >
+                            User
+                        </button>
+                    </div>
+                    <Label className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-amber-50 text-amber-600">
+                            <Hash className="size-3.5" />
+                        </div>
+                        Target entity
+                    </Label>
+                    <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => setCustomizationTargetScope('org')}
+                            className={`flex-1 px-2 py-2 text-xs font-semibold transition-colors ${
+                                customizationTargetScope === 'org'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                            }`}
+                        >
+                            Org
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCustomizationTargetScope('company')}
+                            className={`flex-1 px-2 py-2 text-xs font-semibold transition-colors ${
+                                customizationTargetScope === 'company'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                            }`}
+                        >
+                            Company
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCustomizationTargetScope('user')}
+                            className={`flex-1 px-2 py-2 text-xs font-semibold transition-colors ${
+                                customizationTargetScope === 'user'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                            }`}
+                        >
+                            User
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {config.dualScopeSelector && (
                 <div className="space-y-2">
@@ -204,7 +327,7 @@ function ScriptRunnerForm({ scriptKey, isRunning, onSubmit }) {
                 </div>
             )}
 
-            {config.scopeSelector && !config.dualScopeSelector && (
+            {config.scopeSelector && !config.dualScopeSelector && !config.customizationEntityScopes && (
                 <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                         <div className="p-1 rounded bg-amber-50 text-amber-600">

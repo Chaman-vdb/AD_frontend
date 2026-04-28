@@ -86,6 +86,37 @@ export function getWorkflowNote(mode) {
         );
     }
 
+    if (mode === 'server-admin') {
+        return (
+            <div className="rounded-lg border border-violet-200 bg-violet-50/90 px-3 py-2.5 text-left text-[11px] text-violet-900 leading-relaxed max-w-lg w-full mx-auto">
+                <p className="font-semibold text-violet-950 mb-1">Create server admin</p>
+                <p>
+                    POSTs to <code className="text-[10px]">/superadmin/admin_users</code> like the superadmin “New admin user”
+                    form. The backend logs in with <code className="text-[10px]">STAGE_SUPERADMIN_EMAIL</code> /{' '}
+                    <code className="text-[10px]">STAGE_SUPERADMIN_PASSWORD</code> against{' '}
+                    <code className="text-[10px]">STAGE_BASE_URL</code> (same session as bulk users).
+                </p>
+            </div>
+        );
+    }
+
+    if (mode === 'single-user-http') {
+        return (
+            <div className="rounded-lg border border-sky-200 bg-sky-50/90 px-3 py-2.5 text-left text-[11px] text-sky-900 leading-relaxed max-w-lg w-full mx-auto">
+                <p className="font-semibold text-sky-950 mb-1">Create single user (superadmin)</p>
+                <p>
+                    POSTs to <code className="text-[10px]">/superadmin/users</code> (end user, not admin). A successful create
+                    often redirects to the superadmin dashboard. Optional profile fields default to captured superadmin values (
+                    e.g. first <strong>test</strong>, last <strong>user</strong>, country <strong>India</strong>, city{' '}
+                    <strong>Agar</strong>) or env overrides <code className="text-[10px]">SINGLE_USER_HTTP_*</code>. Check{' '}
+                    <strong>Mark email verified</strong> to load <code className="text-[10px]">users.id</code> by email + company
+                    and PATCH the edit form (scraped fields + <code className="text-[10px]">user[confirmed?]</code>), like bulk
+                    users.
+                </p>
+            </div>
+        );
+    }
+
     if (mode === 'inventory-permissions') {
         return (
             <div className="rounded-lg border border-cyan-200 bg-cyan-50/90 px-3 py-2.5 text-left text-[11px] text-cyan-900 leading-relaxed max-w-lg w-full mx-auto">
