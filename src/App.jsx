@@ -9,7 +9,8 @@ import MainContent from './components/MainContent.jsx';
 import { OrgForm, CompanyForm, UserForm, ServerAdminForm, SingleUserHttpForm, InventoryPermissionForm, ScriptForm, BulkUsersSheetForm } from './components/SidebarForms.jsx';
 import { NAV_ITEMS, STEP_DEFS } from './constants.js';
 import { getWorkflowNote } from './workflowNotes.jsx';
-import { apiFetch, readNdjsonBulkRunResponse } from './lib/api.js';
+import { apiFetch, apiJson, readNdjsonBulkRunResponse } from './lib/api.js';
+import { normalizeTargetEnvironmentResponse } from './lib/targetEnvironment.js';
 import { useProcessLock } from './context/ProcessLockContext.jsx';
 
 const BULK_CREATED_CSV_HEADER = 'username,userId,email';
@@ -133,6 +134,9 @@ function App() {
     /** null | 'run' | 'bulk-validate' — production confirmation before side effects */
     const [pendingAction, setPendingAction] = useState(null);
 
+    const [targetEnvironment, setTargetEnvironment] = useState(null);
+    const [targetEnvironmentSaving, setTargetEnvironmentSaving] = useState(false);
+
     const { setLocked } = useProcessLock();
     const navigationLocked = isRunning || bulkUsersValidating;
 
@@ -167,6 +171,34 @@ function App() {
     }, [toastMessage]);
 
     // ── Data fetching ──
+    const refreshTargetEnvironment = useCallback(() => (
+        apiFetch('/api/target-environment/public')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                const normalized = normalizeTargetEnvironmentResponse(data);
+                if (normalized) setTargetEnvironment(normalized);
+            })
+    ), []);
+
+    useEffect(() => { refreshTargetEnvironment(); }, [refreshTargetEnvironment]);
+
+    const handleTargetEnvironmentChange = useCallback(async (targetId) => {
+        setTargetEnvironmentSaving(true);
+        try {
+            await apiJson('/api/target-environment', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetId }),
+            });
+            setToastMessage('Automation target saved. New runs use this VDB URL.');
+            await refreshTargetEnvironment();
+        } catch (e) {
+            setToastMessage(e?.message || 'Could not update target');
+        } finally {
+            setTargetEnvironmentSaving(false);
+        }
+    }, [refreshTargetEnvironment]);
+
     const refreshAppData = useCallback(() => {
         apiFetch('/api/health').then(r => r.json()).then(d => setDbStatus(d.status === 'ok' ? 'connected' : 'error')).catch(() => setDbStatus('error'));
         apiFetch('/api/data/orgs').then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(d => { if (Array.isArray(d)) setOrgs(d); }).catch(() => setOrgs([]));
@@ -175,7 +207,8 @@ function App() {
             setCurrentUser(user);
         }).catch(() => {});
         fetchHistory();
-    }, [fetchHistory]);
+        refreshTargetEnvironment();
+    }, [fetchHistory, refreshTargetEnvironment]);
 
     useEffect(() => { refreshAppData(); }, [refreshAppData]);
     useEffect(() => {
@@ -1370,6 +1403,9 @@ function App() {
                     currentUserEmail={currentUser?.email}
                     onLogout={handleLogout}
                     workflowNote={getWorkflowNote(mode)}
+                    targetEnvironment={targetEnvironment}
+                    onTargetEnvironmentChange={handleTargetEnvironmentChange}
+                    targetEnvironmentSaving={targetEnvironmentSaving}
                 />
             </div>
 

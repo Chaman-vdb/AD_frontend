@@ -220,11 +220,12 @@ export function BulkUsersSheetForm({
     <>
       <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
         <p className="text-[11px] text-emerald-800 leading-relaxed">
-          Upload a sheet with columns:{" "}
-          <strong>
-            org, company, name, lastname, username, password, country, city,
-            visibility,email
-          </strong>
+          Upload <strong>.xlsx, .xls, or .csv</strong>. <strong>Required:</strong> org (or organization_id), company
+          (company_id), username, password. <strong>Optional:</strong> name, lastname, email, country, city, state,
+          visibility — omitted fields use the same defaults as single-user HTTP (
+          <code className="text-[10px]">test</code> / <code className="text-[10px]">user</code> /{' '}
+          <code className="text-[10px]">India</code> / <code className="text-[10px]">Agar</code> or{' '}
+          <code className="text-[10px]">SINGLE_USER_HTTP_*</code> env).
         </p>
       </div>
       <div>

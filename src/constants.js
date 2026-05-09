@@ -10,18 +10,18 @@ export const NAV_SECTIONS = {
 };
 
 export const NAV_ITEMS = [
-    { id: 'org', section: 'replication', label: 'Copy organization', icon: Building2, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-    { id: 'company', section: 'replication', label: 'Copy company', icon: Building, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+    { id: 'org', section: 'replication', label: ' Organization', icon: Building2, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
+    { id: 'company', section: 'replication', label: 'Company', icon: Building, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
     { id: 'script-import-search-menus-sheet', section: 'create', label: 'Import custom menus from sheet', icon: FileCode, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700', scriptKey: 'importCustomSearchMenusFromSheet' },
     { id: 'bulk-users-sheet', section: 'create', label: 'Bulk users (Excel/CSV)', icon: FileSpreadsheet, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700' },
-    { id: 'inventory-permissions', section: 'create', label: 'Inventory API permissions', icon: KeyRound, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700' },
-    { id: 'server-admin', section: 'create', label: 'Create server admin', icon: UserCog, iconBg: 'bg-violet-100', iconColor: 'text-violet-700' },
-    { id: 'single-user-http', section: 'create', label: 'Create single user (superadmin)', icon: User, iconBg: 'bg-sky-100', iconColor: 'text-sky-700' },
-    { id: 'script-copy-search-menus', section: 'sync', label: 'Copy custom search menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
-    { id: 'script-copy-white-label', section: 'sync', label: 'Copy white label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
-    { id: 'script-copy-customizations', section: 'sync', label: 'Copy customizations (org / company / user)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations' },
-    { id: 'script-copy-custom-data', section: 'sync', label: 'Copy custom data & values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues' },
-    { id: 'script-test-features', section: 'sync', label: 'Copy company feature switches', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
+    { id: 'inventory-permissions', section: 'create', label: 'Inventory API Permissions', icon: KeyRound, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700' },
+    { id: 'server-admin', section: 'create', label: 'Server admin', icon: UserCog, iconBg: 'bg-violet-100', iconColor: 'text-violet-700' },
+    { id: 'single-user-http', section: 'create', label: 'App User', icon: User, iconBg: 'bg-sky-100', iconColor: 'text-sky-700' },
+    { id: 'script-copy-search-menus', section: 'sync', label: 'Custom Search Menus', icon: Copy, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomSearchMenus' },
+    { id: 'script-copy-white-label', section: 'sync', label: 'White Label', icon: Palette, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyOrgWhiteLabel' },
+    { id: 'script-copy-customizations', section: 'sync', label: ' Customizations (org / company / user)', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomizations' },
+    { id: 'script-copy-custom-data', section: 'sync', label: ' Custom Data & Values', icon: FileCode, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', scriptKey: 'copyCustomDataAndValues' },
+    { id: 'script-test-features', section: 'sync', label: 'Company Feature Switches', icon: Zap, iconBg: 'bg-orange-100', iconColor: 'text-orange-600', scriptKey: 'testFeatureActivation' },
 ];
 
 export const STEP_DEFS = {
