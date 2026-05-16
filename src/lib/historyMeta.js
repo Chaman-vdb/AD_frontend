@@ -36,14 +36,44 @@ export const STATUS_BADGE = {
     paused: { variant: 'secondary', icon: Pause, label: 'Paused' },
 };
 
-export const MODE_FILTERS = ['all', 'org', 'company', 'user', 'script', 'inventory-permissions', 'bulk-users-sheet', 'server-admin', 'single-user-http'];
-export const STATUS_FILTERS = ['all', 'completed', 'failed', 'running', 'paused'];
+/** Dot + label for history list / detail status chips */
+export function runStatusRibbon(status) {
+    const s = status || 'pending';
+    const map = {
+        completed: { dot: 'bg-emerald-500', label: 'Completed' },
+        failed: { dot: 'bg-red-500', label: 'Failed' },
+        running: { dot: 'bg-blue-500', label: 'In progress', pulse: true },
+        paused: { dot: 'bg-amber-500', label: 'Paused' },
+        pending: { dot: 'bg-slate-300', label: 'Pending' },
+    };
+    return map[s] || map.pending;
+}
+
+export function stepStatusRibbon(status) {
+    const s = status || 'pending';
+    const map = {
+        completed: { dot: 'bg-emerald-500', label: 'Completed' },
+        failed: { dot: 'bg-red-500', label: 'Failed' },
+        running: { dot: 'bg-blue-500', label: 'Running', pulse: true },
+        pending: { dot: 'bg-slate-200', label: 'Pending' },
+    };
+    return map[s] || map.pending;
+}
+
 
 export function formatHistoryDate(ts) {
     const d = new Date(ts);
     if (Number.isNaN(d.getTime())) return '—';
     return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
 }
+
+/** Long prose date like "22 January 2025" */
+export function formatHistoryDateCalendar(ts) {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 
 /** Short relative label e.g. "Just now", "3h ago", "Apr 17" */
 export function formatRelativeTime(ts) {
