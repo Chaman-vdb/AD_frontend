@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Database, LogOut } from 'lucide-react';
+import { Database, LogOut, Percent } from 'lucide-react';
 import { SidebarTrigger } from './Sidebar.jsx';
 import StepPipeline from './StepPipeline.jsx';
 import StatusLog from './StatusLog.jsx';
@@ -8,6 +8,7 @@ import { Card } from './ui/Card.jsx';
 import { Badge } from './ui/Badge.jsx';
 import { fadeIn } from '../constants.js';
 import EnvironmentSelect from './EnvironmentSelect.jsx';
+import { Link } from 'react-router-dom';
 
 function MainContent({
     activeNavItem, ActiveIcon, isRunning, dbStatus,
@@ -33,6 +34,14 @@ function MainContent({
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 sm:justify-end">
+                    <Link
+                        to="/marup-verification"
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-800 shrink-0"
+                        title="Markup verification"
+                    >
+                        <Percent className="size-3" />
+                        Markup
+                    </Link>
                     {targetEnvironment?.options?.length > 0 && (
                         <EnvironmentSelect
                             current={targetEnvironment.current}

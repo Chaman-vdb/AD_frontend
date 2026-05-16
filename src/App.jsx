@@ -864,6 +864,7 @@ function App() {
                         startIndex: effectiveResume.startIndex,
                         usernameOverrides: effectiveResume.usernameOverrides || {},
                         verifyEmail: bulkVerifyEmailAfterCreate,
+                        runId,
                     }),
                     signal: ctrl.signal,
                 });
@@ -872,6 +873,7 @@ function App() {
                 fd.append('file', bulkUserFile, bulkUserFile.name);
                 if (bulkUserSheetName.trim()) fd.append('sheetName', bulkUserSheetName.trim());
                 fd.append('verifyEmail', bulkVerifyEmailAfterCreate ? 'true' : 'false');
+                fd.append('runId', runId);
                 res = await apiFetch('/api/bulk-users/run', {
                     method: 'POST',
                     body: fd,

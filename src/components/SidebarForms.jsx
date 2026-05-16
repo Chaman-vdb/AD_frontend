@@ -1574,9 +1574,27 @@ export function ScriptForm({ mode, scriptValues, setScriptValues, disabled }) {
                     Browse
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-400">
-                  Tip: You can paste a path or pick the file directly.
-                </p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-[10px] text-slate-400">
+                    Tip: You can paste a path or pick the file directly.
+                  </p>
+                  <a
+                    href="https://docs.google.com/spreadsheets/d/1cFRVoDdhwU9zlCH_q3e-TR5KkRvHuxiy9KmTU4SsaKo/edit"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    View sample sheet ↗
+                  </a>
+                  <a
+                    href="https://docs.google.com/spreadsheets/d/1cFRVoDdhwU9zlCH_q3e-TR5KkRvHuxiy9KmTU4SsaKo/export?format=xlsx"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    Download as .xlsx ↗
+                  </a>
+                </div>
               </div>
             ) : (
               <>

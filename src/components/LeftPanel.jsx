@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Activity, Database, Square, Play, Menu, ChevronDown, History, X,
+    Activity, Database, Square, Play, Menu, ChevronDown, History, X, Percent,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/Button.jsx';
@@ -112,13 +112,22 @@ function LeftPanel({
                             All
                         </span>
                     ) : (
-                        <Link
-                            to="/history"
-                            className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors text-[9px] font-bold uppercase tracking-wide"
-                            title="Full history page"
-                        >
-                            All
-                        </Link>
+                        <>
+                            <Link
+                                to="/marup-verification"
+                                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors"
+                                title="Markup verification"
+                            >
+                                <Percent className="size-4" />
+                            </Link>
+                            <Link
+                                to="/history"
+                                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 transition-colors text-[9px] font-bold uppercase tracking-wide"
+                                title="Full history page"
+                            >
+                                All
+                            </Link>
+                        </>
                     )}
                 </div>
             </div>

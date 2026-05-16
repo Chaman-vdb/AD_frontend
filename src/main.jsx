@@ -5,6 +5,7 @@ import App from './App.jsx';
 import HistoryPage from './pages/HistoryPage.jsx';
 import RunDetailPage from './pages/RunDetailPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import MarupVerificationPage from './pages/MarupVerificationPage.jsx';
 import { ProcessLockProvider } from './context/ProcessLockContext.jsx';
 import { apiFetch } from './lib/api.js';
 import './index.css';
@@ -61,6 +62,8 @@ const router = createBrowserRouter([
         element: <RequireAuthLayout />,
         children: [
             { index: true, element: <App /> },
+            { path: 'marup-verification', element: <MarupVerificationPage /> },
+            { path: 'marup-verification/supplier-tiered', element: <MarupVerificationPage /> },
             { path: 'history', element: <HistoryPage /> },
             { path: 'history/:runId', element: <RunDetailPage /> },
         ],
