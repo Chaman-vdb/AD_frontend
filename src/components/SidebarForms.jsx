@@ -119,6 +119,14 @@ export function CompanyForm({
   setCcDestOrg,
   ccNewName,
   setCcNewName,
+  ccCompanyCount,
+  setCcCompanyCount,
+  ccSequenceStart,
+  setCcSequenceStart,
+  ccCopyJsons,
+  setCcCopyJsons,
+  ccAddToNatl,
+  setCcAddToNatl,
   disabled,
 }) {
   return (
@@ -182,17 +190,66 @@ export function CompanyForm({
             </Select>
           </div>
           {ccDestOrg && (
-            <div>
-              <label className={sideLabel}>New Company Name</label>
-              <input
-                className={sideInput}
-                value={ccNewName}
-                onChange={(e) => setCcNewName(e.target.value)}
-                onBlur={(e) => setCcNewName(e.target.value.trim())}
-                placeholder="Company name..."
-                disabled={disabled}
-              />
-            </div>
+            <>
+              <div>
+                <label className={sideLabel}>New Company Name (base)</label>
+                <input
+                  className={sideInput}
+                  value={ccNewName}
+                  onChange={(e) => setCcNewName(e.target.value)}
+                  onBlur={(e) => setCcNewName(e.target.value.trim())}
+                  placeholder="Company name..."
+                  disabled={disabled}
+                />
+              </div>
+              <div>
+                <label className={sideLabel}>Companies to create</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  className={sideInput}
+                  value={ccCompanyCount}
+                  onChange={(e) => setCcCompanyCount(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
+                  disabled={disabled}
+                />
+              </div>
+              {Number(ccCompanyCount) > 1 && (
+                <div>
+                  <label className={sideLabel}>Sequence from</label>
+                  <input
+                    className={sideInput}
+                    value={ccSequenceStart}
+                    onChange={(e) => setCcSequenceStart(e.target.value)}
+                    placeholder="01"
+                    disabled={disabled}
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    e.g. base &quot;Test Co&quot; + 01 → Test Co01, Test Co02…
+                  </p>
+                </div>
+              )}
+              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={ccCopyJsons}
+                  onChange={(e) => setCcCopyJsons(e.target.checked)}
+                  disabled={disabled}
+                  className="rounded border-slate-300"
+                />
+                Copy JSON
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={ccAddToNatl}
+                  onChange={(e) => setCcAddToNatl(e.target.checked)}
+                  disabled={disabled}
+                  className="rounded border-slate-300"
+                />
+                Add to NATL group
+              </label>
+            </>
           )}
         </motion.div>
       )}

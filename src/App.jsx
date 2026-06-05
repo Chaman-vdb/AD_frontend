@@ -67,6 +67,10 @@ function App() {
     const [ccSelectedCompany, setCcSelectedCompany] = useState('');
     const [ccDestOrg, setCcDestOrg] = useState('');
     const [ccNewName, setCcNewName] = useState('');
+    const [ccCompanyCount, setCcCompanyCount] = useState(1);
+    const [ccSequenceStart, setCcSequenceStart] = useState('01');
+    const [ccCopyJsons, setCcCopyJsons] = useState(false);
+    const [ccAddToNatl, setCcAddToNatl] = useState(false);
 
     const [cuBaseUrl, setCuBaseUrl] = useState('');
     const [cuEmail, setCuEmail] = useState('');
@@ -404,11 +408,17 @@ function App() {
         const ctrl = new AbortController(); abortRef.current = ctrl;
         setIsRunning(true); setIsPaused(false); setRunStartTime(new Date());
         setLogs([{ type: 'progress', message: 'Starting company replication...', timestamp: new Date().toISOString() }]);
-        initSteps('company');
+        const companySteps = STEP_DEFS.company.filter(s => ccCopyJsons || s.id !== 'copy-customizations');
+        stepsRef.current = companySteps.map(s => ({ ...s, status: 'pending' }));
+        setSteps(stepsRef.current);
         const params = {
             targetOrgId: trimText(ccDestOrg),
             sourceCompanyId: trimText(ccSelectedCompany),
             newCompanyName: trimText(ccNewName),
+            companyCount: Number(ccCompanyCount) || 1,
+            ...(Number(ccCompanyCount) > 1 ? { sequenceStart: trimText(ccSequenceStart) || '01' } : {}),
+            copyCustomizations: ccCopyJsons,
+            addToNatlGroup: ccAddToNatl,
         };
         const runId = `run-${Date.now()}`;
         setCurrentRunId(runId);
@@ -1095,6 +1105,9 @@ function App() {
                 lines.push(`Source company: ${src?.name || '—'} (#${ccSelectedCompany || '—'})`);
                 lines.push(`Destination org: ${dest?.name || '—'} (#${ccDestOrg || '—'})`);
                 lines.push(`New company name: ${ccNewName || '—'}`);
+                lines.push(`Companies to create: ${ccCompanyCount}${Number(ccCompanyCount) > 1 ? ` (from ${ccSequenceStart || '01'})` : ''}`);
+                lines.push(`Copy JSONs: ${ccCopyJsons ? 'yes' : 'no'}`);
+                lines.push(`Add to NATL group: ${ccAddToNatl ? 'yes' : 'no'}`);
                 break;
             }
             case 'user':
@@ -1304,7 +1317,7 @@ function App() {
             case 'org':
                 return <OrgForm orgs={orgs} companies={companies} selectedOrg={selectedOrg} setSelectedOrg={setSelectedOrg} selectedCompany={selectedCompany} setSelectedCompany={setSelectedCompany} orgDetails={orgDetails} companyDetails={companyDetails} newOrgName={newOrgName} setNewOrgName={setNewOrgName} newDomainUrl={newDomainUrl} setNewDomainUrl={setNewDomainUrl} newCompanyName={newCompanyName} setNewCompanyName={setNewCompanyName} disabled={disabled} />;
             case 'company':
-                return <CompanyForm orgs={orgs} ccSourceOrg={ccSourceOrg} setCcSourceOrg={setCcSourceOrg} ccCompanies={ccCompanies} ccSelectedCompany={ccSelectedCompany} setCcSelectedCompany={setCcSelectedCompany} ccDestOrg={ccDestOrg} setCcDestOrg={setCcDestOrg} ccNewName={ccNewName} setCcNewName={setCcNewName} disabled={disabled} />;
+                return <CompanyForm orgs={orgs} ccSourceOrg={ccSourceOrg} setCcSourceOrg={setCcSourceOrg} ccCompanies={ccCompanies} ccSelectedCompany={ccSelectedCompany} setCcSelectedCompany={setCcSelectedCompany} ccDestOrg={ccDestOrg} setCcDestOrg={setCcDestOrg} ccNewName={ccNewName} setCcNewName={setCcNewName} ccCompanyCount={ccCompanyCount} setCcCompanyCount={setCcCompanyCount} ccSequenceStart={ccSequenceStart} setCcSequenceStart={setCcSequenceStart} ccCopyJsons={ccCopyJsons} setCcCopyJsons={setCcCopyJsons} ccAddToNatl={ccAddToNatl} setCcAddToNatl={setCcAddToNatl} disabled={disabled} />;
             case 'user':
                 return <UserForm cuBaseUrl={cuBaseUrl} setCuBaseUrl={setCuBaseUrl} cuEmail={cuEmail} setCuEmail={setCuEmail} cuPassword={cuPassword} setCuPassword={setCuPassword} cuCompanyId={cuCompanyId} setCuCompanyId={setCuCompanyId} cuName={cuName} setCuName={setCuName} cuCount={cuCount} setCuCount={setCuCount} disabled={disabled} />;
             case 'server-admin':

@@ -28,6 +28,9 @@ export function getWorkflowNote(mode) {
                         <strong>Org settings:</strong> active org feature toggles are applied on the org edit screen (with
                         access where the UI supports it).
                     </li>
+                    <li>
+                        <strong>Company (when optional company is copied):</strong> the new company is automatically added to the NATL group.
+                    </li>
                 </ul>
                 <p className="font-semibold text-violet-950 mt-2 mb-1">Limits</p>
                 <ul className="list-disc pl-4 space-y-1">
@@ -44,8 +47,7 @@ export function getWorkflowNote(mode) {
                 <p className="font-semibold text-blue-950 mb-1">Copy company — verified behavior</p>
                 <ul className="list-disc pl-4 space-y-1">
                     <li>
-                        <strong>Groups:</strong> source company groups and group memberships are not copied. The new company is
-                        created with a default group only, not the source company’s groups.
+                        <strong>Groups:</strong> source company groups / memberships are not copied. Enable <strong>Add to NATL group</strong> to also add each new company to NATL (org copy always adds NATL automatically).
                     </li>
                     <li>
                         <strong>Feature switches:</strong> only active features on the source are considered; the tool enables
@@ -53,8 +55,14 @@ export function getWorkflowNote(mode) {
                         copied from the source.
                     </li>
                     <li>
+                        <strong>Multiple companies:</strong> set count and sequence start (e.g. base &quot;Acme&quot; + 01 → Acme01, Acme02).
+                    </li>
+                    <li>
+                        <strong>Copy JSONs:</strong> when checked, copies all parent customization JSON (global, custom texts, nav menu, PDP, search forms, etc.) to each new company.
+                    </li>
+                    <li>
                         <strong>Other settings:</strong> company fields copied via the new-company form and locations; other
-                        company settings outside this flow are not replicated.
+                        company settings outside this flow are not replicated unless Copy JSONs is enabled.
                     </li>
                 </ul>
                 <p className="mt-2 text-blue-800/90">

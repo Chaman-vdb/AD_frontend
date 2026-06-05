@@ -38,10 +38,11 @@ export const STEP_DEFS = {
     ],
     company: [
         { id: 'verify-org', label: 'Verify Target Organization' },
-        { id: 'validate-name', label: 'Validate Company Name' },
+        { id: 'validate-name', label: 'Validate Company Names' },
         { id: 'fetch-source', label: 'Fetch Source Company Data' },
-        { id: 'run-spec', label: 'Run Company Replication (Playwright)' },
-        { id: 'lookup-id', label: 'Lookup New Company ID' },
+        { id: 'run-spec', label: 'Create Companies (Playwright)' },
+        { id: 'lookup-id', label: 'Lookup New Company IDs' },
+        { id: 'copy-customizations', label: 'Copy Customization JSONs' },
     ],
     inventoryPermissions: [
         { id: 'validate-fields', label: 'Validate Input Fields' },
