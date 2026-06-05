@@ -10,6 +10,7 @@ import { OrgForm, CompanyForm, UserForm, ServerAdminForm, SingleUserHttpForm, In
 import { NAV_ITEMS, STEP_DEFS } from './constants.js';
 import { getWorkflowNote } from './workflowNotes.jsx';
 import { apiFetch, apiJson, readNdjsonBulkRunResponse } from './lib/api.js';
+import { buildSequencedCompanyNames, companyRunLabel } from './lib/companySequence.js';
 import { normalizeTargetEnvironmentResponse } from './lib/targetEnvironment.js';
 import { useProcessLock } from './context/ProcessLockContext.jsx';
 
@@ -322,6 +323,16 @@ function App() {
         return error?.message || null;
     };
 
+    const parseCompanyRunResult = (events) => {
+        const resultEv = [...events].reverse().find((e) => e.type === 'result');
+        if (!resultEv?.message) return null;
+        try {
+            return JSON.parse(resultEv.message);
+        } catch {
+            return null;
+        }
+    };
+
     // ── Handlers ──
     const handleStop = async () => {
         try {
@@ -411,20 +422,24 @@ function App() {
         const companySteps = STEP_DEFS.company.filter(s => ccCopyJsons || s.id !== 'copy-customizations');
         stepsRef.current = companySteps.map(s => ({ ...s, status: 'pending' }));
         setSteps(stepsRef.current);
+        const companyCount = Number(ccCompanyCount) || 1;
+        const sequenceStart = companyCount > 1 ? (trimText(ccSequenceStart) || '01') : undefined;
+        const companyNames = buildSequencedCompanyNames(trimText(ccNewName), companyCount, sequenceStart);
         const params = {
             targetOrgId: trimText(ccDestOrg),
             sourceCompanyId: trimText(ccSelectedCompany),
             newCompanyName: trimText(ccNewName),
-            companyCount: Number(ccCompanyCount) || 1,
-            ...(Number(ccCompanyCount) > 1 ? { sequenceStart: trimText(ccSequenceStart) || '01' } : {}),
+            companyCount,
+            ...(companyCount > 1 ? { sequenceStart } : {}),
             copyCustomizations: ccCopyJsons,
             addToNatlGroup: ccAddToNatl,
+            companyNames,
         };
         const runId = `run-${Date.now()}`;
         setCurrentRunId(runId);
         addToHistory({
             id: runId,
-            label: params.newCompanyName,
+            label: companyRunLabel(params.newCompanyName, companyCount, sequenceStart),
             status: 'running',
             startedAt: new Date().toISOString(),
             mode: 'company',
@@ -438,7 +453,15 @@ function App() {
             const res = await apiFetch('/api/replicate/company', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...params, runId }), signal: ctrl.signal });
             await readSSE(res, runEvents);
             const hasFailed = stepsRef.current.some(s => s.status === 'failed');
-            updateHistoryRun(runId, { status: hasFailed ? 'failed' : 'completed', endedAt: new Date().toISOString(), steps: serializeSteps(), events: runEvents, resultMessage: getResultMessage(runEvents) });
+            const companyResult = parseCompanyRunResult(runEvents);
+            updateHistoryRun(runId, {
+                status: hasFailed ? 'failed' : 'completed',
+                endedAt: new Date().toISOString(),
+                steps: serializeSteps(),
+                events: runEvents,
+                resultMessage: getResultMessage(runEvents),
+                ...(companyResult ? { request: { ...params, ...companyResult } } : {}),
+            });
         } catch (err) {
             if (err.name !== 'AbortError') { setLogs(prev => [...prev, { type: 'error', message: `Connection error: ${err.message}`, timestamp: new Date().toISOString() }]); updateHistoryRun(runId, { status: 'failed', endedAt: new Date().toISOString(), steps: serializeSteps(), events: runEvents, resultMessage: err.message }); }
         } finally { abortRef.current = null; startingRef.current = false; setIsRunning(false); }

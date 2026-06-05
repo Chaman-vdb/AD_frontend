@@ -287,10 +287,29 @@ function RunDetailPage() {
                     </dl>
                 </DetailsPanel>
 
+                {run.mode === 'company' && Array.isArray(run.request?.createdCompanies) && run.request.createdCompanies.length > 0 && (
+                    <DetailsPanel title={`Created companies (${run.request.createdCompanies.filter((c) => c?.newCompanyId).length}/${run.request.companiesRequested ?? run.request.createdCompanies.length})`} defaultOpen>
+                        <ul className="space-y-2 text-sm">
+                            {run.request.createdCompanies.map((c, idx) => (
+                                <li key={c.newCompanyId || c.companyName || idx} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
+                                    <span className="font-semibold text-slate-900">{c.companyName || '—'}</span>
+                                    {c.newCompanyId ? (
+                                        <span className="text-slate-500 font-mono text-xs">#{c.newCompanyId}</span>
+                                    ) : (
+                                        <span className="text-amber-700 text-xs">ID not resolved</span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </DetailsPanel>
+                )}
+
                 <DetailsPanel title="Request inputs">
                     {run.request && Object.keys(run.request).length > 0 ? (
                         <dl className="grid grid-cols-2">
-                            {Object.entries(run.request).map(([key, value]) => (
+                            {Object.entries(run.request)
+                                .filter(([key]) => key !== 'createdCompanies')
+                                .map(([key, value]) => (
                                 <div key={key} className="rounded-xl  py-2">
                                     <dt className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide ">{humanizeRequestKey(key)}</dt>
                                     <dd className={`text-slate-800 mt-0.5 text-sm${isMultiline(value) ? 'font-mono whitespace-pre-wrap break-all' : 'break-all'}`}>

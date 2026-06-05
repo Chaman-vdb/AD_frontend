@@ -136,7 +136,17 @@ export function requestContext(mode, request) {
     if (mode === 'company') {
         const parts = [];
         if (r.targetOrgId) parts.push(`Org #${r.targetOrgId}`);
-        if (r.sourceCompanyId) parts.push(`from company #${r.sourceCompanyId}`);
+        if (r.sourceCompanyId) parts.push(`from #${r.sourceCompanyId}`);
+        const requested = Number(r.companyCount) || (Array.isArray(r.companyNames) ? r.companyNames.length : 0);
+        if (requested > 1) parts.push(`${requested} companies`);
+        const created = Array.isArray(r.createdCompanies) ? r.createdCompanies.filter((c) => c?.newCompanyId) : [];
+        if (created.length > 0) {
+            parts.push(`created ${created.length}`);
+        } else if (Array.isArray(r.companyNames) && r.companyNames.length > 1) {
+            parts.push(r.companyNames.slice(0, 3).join(', ') + (r.companyNames.length > 3 ? '…' : ''));
+        } else if (r.newCompanyName) {
+            parts.push(`→ ${r.newCompanyName}`);
+        }
         return parts.length ? parts.join(' · ') : null;
     }
     if (mode === 'org') {
