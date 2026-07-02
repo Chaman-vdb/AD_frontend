@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
@@ -15,7 +15,7 @@ import {
     formatRelativeTime,
     formatRunDuration,
     requestContext,
-    rowSearchText,
+    parseHistoryListResponse,
     runStatusRibbon,
 } from '../lib/historyMeta.js';
 
@@ -31,45 +31,61 @@ function statusPillClass(status) {
 function HistoryPage() {
     const navigate = useNavigate();
     const [runs, setRuns] = useState([]);
+    const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedQuery, setDebouncedQuery] = useState('');
     const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedQuery]);
 
     useEffect(() => {
         let active = true;
         setLoading(true);
-        apiFetch('/api/history?limit=200')
-            .then((res) => (res.ok ? res.json() : []))
-            .then((rows) => {
+        const params = new URLSearchParams({
+            limit: String(PAGE_SIZE),
+            offset: String((page - 1) * PAGE_SIZE),
+        });
+        if (debouncedQuery) params.set('q', debouncedQuery);
+
+        apiFetch(`/api/history?${params}`)
+            .then((res) => (res.ok ? res.json() : { items: [], total: 0 }))
+            .then((data) => {
                 if (!active) return;
-                setRuns(Array.isArray(rows) ? rows : []);
+                const parsed = parseHistoryListResponse(data);
+                setRuns(parsed.items);
+                setTotal(parsed.total);
             })
-            .catch(() => active && setRuns([]))
+            .catch(() => {
+                if (!active) return;
+                setRuns([]);
+                setTotal(0);
+            })
             .finally(() => active && setLoading(false));
         return () => { active = false; };
-    }, []);
+    }, [page, debouncedQuery]);
 
-    const filtered = useMemo(() => {
-        const q = searchQuery.trim().toLowerCase();
-        if (!q) return runs;
-        return runs.filter((r) => rowSearchText(r).includes(q));
-    }, [runs, searchQuery]);
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+    const pageEnd = Math.min(page * PAGE_SIZE, total);
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    const paginated = useMemo(() => {
-        const start = (page - 1) * PAGE_SIZE;
-        return filtered.slice(start, start + PAGE_SIZE);
-    }, [filtered, page]);
-
-    useEffect(() => { setPage(1); }, [searchQuery]);
-    useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+    useEffect(() => {
+        if (page > totalPages) setPage(totalPages);
+    }, [page, totalPages]);
 
     const openRun = useCallback((id) => navigate(`/history/${id}`), [navigate]);
 
     return (
         <HistoryPageShell
             title="Run history"
-            subtitle={loading ? 'Loading…' : `${filtered.length} workflow${filtered.length === 1 ? '' : 's'}`}
+            subtitle={loading ? 'Loading…' : `${total.toLocaleString()} workflow${total === 1 ? '' : 's'}`}
             actions={(
                 <div className="relative w-full sm:w-72">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
@@ -87,10 +103,12 @@ function HistoryPage() {
                 <div className="flex justify-center py-24">
                     <Loader2 className="size-6 text-slate-400 animate-spin" />
                 </div>
-            ) : filtered.length === 0 ? (
+            ) : total === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-lg border border-slate-200">
                     <Clock className="size-8 text-slate-300 mb-3" strokeWidth={1.5} />
-                    <p className="text-sm font-medium text-slate-700">{runs.length === 0 ? 'No runs yet' : 'No results'}</p>
+                    <p className="text-sm font-medium text-slate-700">
+                        {debouncedQuery ? 'No results' : 'No runs yet'}
+                    </p>
                     <p className="text-xs text-slate-500 mt-1">Workflows from the dashboard appear here.</p>
                 </div>
             ) : (
@@ -107,7 +125,7 @@ function HistoryPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {paginated.map((run) => {
+                                {runs.map((run) => {
                                     const meta = MODE_META[run.mode] || DEFAULT_MODE_META;
                                     const Ribbon = runStatusRibbon(run.status);
                                     const dur = formatRunDuration(run);
@@ -153,7 +171,7 @@ function HistoryPage() {
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-200 bg-slate-50/50 text-sm text-slate-600">
                             <span className="text-xs text-slate-500">
-                                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                                {pageStart}–{pageEnd} of {total.toLocaleString()}
                             </span>
                             <div className="flex items-center gap-1">
                                 <button

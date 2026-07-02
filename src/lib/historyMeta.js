@@ -197,6 +197,16 @@ export function rowSearchText(r) {
     return flat.join(' ').toLowerCase();
 }
 
+/** Supports legacy array responses and paginated `{ items, total }` payloads. */
+export function parseHistoryListResponse(data) {
+    if (Array.isArray(data)) {
+        return { items: data, total: data.length };
+    }
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const total = Number.isFinite(Number(data?.total)) ? Number(data.total) : items.length;
+    return { items, total };
+}
+
 export function humanizeRequestKey(key) {
     return String(key)
         .replace(/([A-Z])/g, ' $1')

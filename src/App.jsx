@@ -12,6 +12,7 @@ import { getWorkflowNote } from './workflowNotes.jsx';
 import { apiFetch, apiJson, readNdjsonBulkRunResponse } from './lib/api.js';
 import { buildSequencedCompanyNames, companyRunLabel } from './lib/companySequence.js';
 import { normalizeTargetEnvironmentResponse } from './lib/targetEnvironment.js';
+import { parseHistoryListResponse } from './lib/historyMeta.js';
 import { useProcessLock } from './context/ProcessLockContext.jsx';
 
 const BULK_CREATED_CSV_HEADER = 'username,userId,email';
@@ -164,8 +165,11 @@ function App() {
 
     const fetchHistory = useCallback(() => {
         apiFetch('/api/history?limit=50')
-            .then((r) => (r.ok ? r.json() : []))
-            .then((rows) => { if (Array.isArray(rows)) setRunHistory(rows); })
+            .then((r) => (r.ok ? r.json() : { items: [] }))
+            .then((data) => {
+                const { items } = parseHistoryListResponse(data);
+                setRunHistory(items);
+            })
             .catch(() => {});
     }, []);
 
